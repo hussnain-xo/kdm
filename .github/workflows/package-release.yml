@@ -1,0 +1,91 @@
+# Build the same KDM release layout on Windows, macOS, and Linux (IDM-style artifacts).
+# Artifacts: KDM-<version>-macOS.dmg/.zip, KDM-<version>-Linux-x86_64.tar.gz, KDM-<version>-Windows-x64.zip
+name: Package KDM
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  package:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+            label: macOS
+          - os: ubuntu-latest
+            label: Linux-x86_64
+          - os: windows-latest
+            label: Windows-x64
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Python dependencies
+        run: python -m pip install -r requirements-build.txt
+
+      - name: Install Playwright Chromium (optional runtime for users)
+        run: python -m playwright install chromium
+
+      - name: Install Playwright system deps (Linux)
+        if: runner.os == 'Linux'
+        run: python -m playwright install-deps chromium
+
+      - name: PyInstaller
+        run: python -m PyInstaller packaging/kdm.spec --noconfirm --clean
+
+      - name: Prepare README
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION=$(tr -d ' \t\r\n' < packaging/VERSION)
+          mkdir -p dist/release
+          sed "s/__VERSION__/${VERSION}/g" packaging/INSTALL.template.txt > dist/release/KDM-${VERSION}-README.txt
+
+      - name: Package macOS
+        if: runner.os == 'macOS'
+        run: |
+          set -euo pipefail
+          VERSION=$(tr -d ' \t\r\n' < packaging/VERSION)
+          test -d dist/KDM.app
+          STAGE=dist/dmg_staging
+          rm -rf "$STAGE"
+          mkdir -p "$STAGE"
+          cp -R dist/KDM.app "$STAGE/KDM.app"
+          cp dist/release/KDM-${VERSION}-README.txt "$STAGE/README-KDM.txt"
+          ln -sf /Applications "$STAGE/Applications"
+          hdiutil create -volname "Kalupura Download Manager" -srcfolder "$STAGE" -ov -format UDZO "dist/release/KDM-${VERSION}-macOS.dmg"
+          ditto -c -k --sequesterRsrc --keepParent "$STAGE" "dist/release/KDM-${VERSION}-macOS.zip"
+          rm -rf "$STAGE"
+
+      - name: Package Linux
+        if: runner.os == 'Linux'
+        run: |
+          set -euo pipefail
+          VERSION=$(tr -d ' \t\r\n' < packaging/VERSION)
+          test -d dist/KDM
+          cp dist/release/KDM-${VERSION}-README.txt dist/KDM/README-KDM.txt
+          tar -czvf "dist/release/KDM-${VERSION}-Linux-x86_64.tar.gz" -C dist KDM
+
+      - name: Package Windows
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $v = (Get-Content packaging/VERSION -Raw).Trim()
+          if (-not (Test-Path "dist\KDM\KDM.exe")) { throw "KDM.exe missing" }
+          Copy-Item "dist\release\KDM-$v-README.txt" "dist\KDM\README-KDM.txt" -Force
+          Compress-Archive -Path "dist\KDM" -DestinationPath "dist\release\KDM-$v-Windows-x64.zip" -Force
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: KDM-${{ matrix.label }}
+          path: dist/release/*

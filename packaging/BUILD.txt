@@ -1,0 +1,25 @@
+Kalupura Download Manager — release builds
+========================================1) Install build deps (use a venv on each OS you build on):
+   pip install -r requirements-build.txt
+
+2) Build on each target OS (PyInstaller does not cross-compile):
+   Windows:  scripts\build_windows.bat
+   macOS:    chmod +x scripts/build_macos.sh && ./scripts/build_macos.sh
+   Linux:    chmod +x scripts/build_linux.sh && ./scripts/build_linux.sh
+
+3) Outputs:
+   Windows: dist\KDM\KDM.exe  — zip the whole dist\KDM folder
+   macOS:   dist/KalupuraDownloadManager-macOS.dmg (and dist/KDM.app)
+   Linux:   dist/KalupuraDownloadManager-linux-YYYYMMDD.tar.gz
+
+4) Playwright / Chromium:
+   Sites that need browser extraction require Chromium once per machine:
+   playwright install chromium
+
+5) Selling online:
+   Put your download links in kdm_config.json as "distribution_page".
+   The in-app Share button copies that link and a short promo message.
+
+6) Code signing (optional, recommended for macOS/Windows):
+   macOS: codesign / notarize the .app before making the DMG
+   Windows: sign KDM.exe with your Authenticode certificate

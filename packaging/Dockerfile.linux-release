@@ -1,0 +1,26 @@
+# Linux x86_64 release tarball — run from repo root with Docker:
+#   ./scripts/build_linux_docker.sh
+FROM python:3.11-bookworm
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libegl1 libgl1 libxkbcommon0 libdbus-1-3 libfontconfig1 \
+    libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-randr0 \
+    libxcb-render0 libxcb-shape0 libxcb-shm0 libxcb-sync1 libxcb-xfixes0 \
+    libxcb-xinerama0 libxcb1 libxcb-cursor0 libice6 libsm6 \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /src
+COPY requirements-app.txt requirements-build.txt ./
+COPY kdm.py ./
+COPY kdm ./kdm
+COPY translations.json kdm_config.json ./
+COPY packaging ./packaging
+
+RUN pip install --no-cache-dir -r requirements-build.txt
+RUN python -m PyInstaller packaging/kdm.spec --noconfirm --clean
+
+RUN VERSION=$(tr -d ' \t\r\n' < packaging/VERSION) && \
+    mkdir -p /out && \
+    sed "s/__VERSION__/${VERSION}/g" packaging/INSTALL.template.txt > "/out/KDM-${VERSION}-README.txt" && \
+    cp "/out/KDM-${VERSION}-README.txt" dist/KDM/README-KDM.txt && \
+    tar -czvf "/out/KDM-${VERSION}-Linux-x86_64.tar.gz" -C dist KDM

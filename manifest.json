@@ -1,0 +1,93 @@
+{
+  "manifest_version": 3,
+  "name": "Kalupura Download Manager (KDM)",
+  "version": "1.4.0",
+  "description": "Send videos to Kalupura Download Manager (KDM) via local API connection.",
+
+  "permissions": [
+    "activeTab",
+    "scripting",
+    "downloads",
+    "storage",
+    "notifications",
+    "contextMenus",
+    "cookies",
+    "webRequest"
+  ],
+
+  "host_permissions": [
+    "http://127.0.0.1:9669/*",
+    "http://localhost:9669/*",
+    "<all_urls>"
+  ],
+
+  "background": {
+    "service_worker": "background.js"
+  },
+
+  "content_scripts": [
+    {
+      "matches": [
+        "https://www.youtube.com/*",
+        "https://m.youtube.com/*",
+        "https://*.youtube.com/*",
+        "https://youtu.be/*"
+      ],
+      "js": ["content.js"],
+      "run_at": "document_end",
+      "all_frames": false
+    },
+    {
+      "matches": [
+        "https://www.dailymotion.com/*",
+        "https://*.dailymotion.com/*",
+        "http://www.dailymotion.com/*",
+        "http://*.dailymotion.com/*"
+      ],
+      "js": ["content.js"],
+      "run_at": "document_idle",
+      "all_frames": false
+    },
+    {
+      "matches": [
+        "https://*.strp2p.live/*",
+        "http://*.strp2p.live/*"
+      ],
+      "js": ["content.js"],
+      "run_at": "document_idle",
+      "all_frames": false
+    },
+    {
+      "matches": [
+        "https://nyaa.si/*",
+        "https://*.nyaa.si/*",
+        "https://thepiratebay.org/*",
+        "https://*.thepiratebay.org/*",
+        "https://thepiratebay.party/*",
+        "https://tpb.party/*",
+        "https://www.yts-official.top/*",
+        "https://yts-official.top/*",
+        "https://yts.mx/*",
+        "https://yts.lt/*",
+        "https://*.yts.mx/*",
+        "https://torrentgalaxy.to/*",
+        "https://*.torrentgalaxy.to/*",
+        "https://1337x.to/*",
+        "https://*.1337x.to/*"
+      ],
+      "js": ["content.js"],
+      "run_at": "document_end",
+      "all_frames": false
+    }
+  ],
+
+  "action": {
+    "default_title": "Kalupura Download Manager (KDM)"
+  },
+
+  "icons": {
+    "16": "icons/16.png",
+    "48": "icons/48.png",
+    "128": "icons/128.png"
+  }
+}

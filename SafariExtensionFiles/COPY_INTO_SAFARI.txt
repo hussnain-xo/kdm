@@ -1,0 +1,36 @@
+SAFARI EXTENSION MEIN FILES KAISE ADD KAREIN
+============================================
+
+AUTO UPDATE (copy-paste na karna pare): Parent folder mein SAFARI_AUTO_UPDATE.md padho. Wahan Option 1 follow karo — Xcode ko main kdm folder ki files REFERENCE se add karo, phir koi bhi update auto reflect hoga.
+
+YA copy wala tareeka (neeche):
+
+1. APNA XCODE PROJECT KHOLO
+   - Finder mein jao: Downloads > kdm
+   - kdm.xcodeproj double-click se Xcode mein kholo
+
+2. EXTENSION RESOURCES FOLDER DHUNDHO
+   - Left sidebar: "Shared (Extension)" expand karo
+   - Andar "Resources" folder dikhega (ya similar naam)
+   - Us Resources folder ke andar abhi manifest, content.js, background.js honge
+
+3. FILES REPLACE KARO
+   - Is SafariExtensionFiles folder se ye files COPY karo:
+     * manifest.json  -> Resources/manifest.json (purani replace karo)
+     * content.js     -> Resources/content.js (purani replace karo)
+     * background.js  -> Resources/background.js (purani replace karo)
+     * watchfilmy-capture.js -> Resources/watchfilmy-capture.js (agar nahi hai to add karo)
+   - Agar Xcode project ke andar "manifest" bina .json dikhe to wahi file hai - uske andar manifest.json ka content paste karo (purana delete karke)
+
+4. ICONS (agar missing hon)
+   - Agar icons/16.png, 48.png, 128.png missing hon to main kdm folder (jahan kdm.py hai) se icons folder copy karo Resources ke andar.
+
+5. BUILD + RUN
+   - Xcode: Product > Build (Cmd+B)
+   - Product > Run (Cmd+R)
+   - Safari > Settings > Extensions > KDM enable karo
+   - YouTube / koi page refresh karo, "Download with KDM" button ya right-click menu check karo.
+
+6. KDM APP CHALAO
+   - Terminal: cd /Users/hussnainasif/kdm && python3 kdm.py
+   - Jab tak KDM chal raha hai tab tak extension download bhej sakta hai.
