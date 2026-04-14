@@ -1,0 +1,30 @@
+================================================================================
+  KDM on Mac — first launch (read once)
+================================================================================
+
+1) DRAG TO APPLICATIONS
+   Open the .dmg, drag "KDM.app" onto the "Applications" folder (or your
+   Applications folder in Finder). Do not run loose files inside a random folder.
+
+2) FIRST OPEN (required once)
+   In Finder: go to Applications → Control-click (right-click) "KDM.app" → Open.
+   Click "Open" in the dialog. After this, double-click works normally.
+
+3) IF IT STILL SAYS "CAN'T BE OPENED"
+   Open Terminal (Spotlight: type Terminal) and run EXACTLY:
+
+     xattr -cr /Applications/KDM.app
+
+   If KDM is on Desktop instead:
+
+     xattr -cr ~/Desktop/KDM.app
+
+   Then try Control-click → Open again.
+
+4) INTEL vs APPLE SILICON
+   This build is a universal app (Intel + M1/M2/M3). If problems persist, tell
+   support your Mac model and macOS version.
+
+5) KDM must stay running for the browser extension (Chrome) to send links.
+
+================================================================================

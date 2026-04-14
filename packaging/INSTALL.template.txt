@@ -5,7 +5,8 @@ Same app for Windows, macOS, and Linux — 30-day trial starts automatically on 
 
 RUN
   • Windows: open the KDM folder, run KDM.exe
-  • macOS: open KDM.app (or drag it to Applications from the disk image)
+  • macOS: open the .dmg, drag KDM.app to Applications. First launch: Control-click
+    KDM.app → Open (see MAC_FIRST_LAUNCH.txt in the disk image).
   • Linux: extract the archive, run ./KDM/KDM
 
 AFTER INSTALL

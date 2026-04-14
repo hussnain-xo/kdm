@@ -9,7 +9,15 @@ cd "$ROOT"
 
 VERSION="$(tr -d ' \t\r\n' < "$ROOT/packaging/VERSION")"
 python3 -m pip install -r requirements-build.txt
-python3 -m PyInstaller packaging/kdm.spec --noconfirm --clean
+if [[ "$(uname -s)" == "Darwin" ]]; then
+  if ! python3 -m PyInstaller packaging/kdm.spec --noconfirm --clean --target-arch universal2; then
+    echo "Universal2 failed; building default arch for this Mac."
+    python3 -m PyInstaller packaging/kdm.spec --noconfirm --clean
+  fi
+  "$ROOT/scripts/sign_mac_app.sh" "$ROOT/dist/KDM.app"
+else
+  python3 -m PyInstaller packaging/kdm.spec --noconfirm --clean
+fi
 
 REL="$ROOT/dist/release"
 rm -rf "$REL"
@@ -30,6 +38,7 @@ case "$OS_UNAME" in
     mkdir -p "$STAGE"
     cp -R "$APP" "$STAGE/KDM.app"
     cp "$REL/KDM-${VERSION}-README.txt" "$STAGE/README-KDM.txt"
+    cp "$ROOT/packaging/MAC_FIRST_LAUNCH.txt" "$STAGE/MAC_FIRST_LAUNCH.txt"
     if [[ ! -e "$STAGE/Applications" ]]; then
       ln -sf /Applications "$STAGE/Applications"
     fi

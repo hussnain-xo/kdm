@@ -40,8 +40,21 @@ jobs:
         if: runner.os == 'Linux'
         run: python -m playwright install-deps chromium
 
-      - name: PyInstaller
+      - name: PyInstaller (Windows / Linux)
+        if: runner.os != 'macOS'
         run: python -m PyInstaller packaging/kdm.spec --noconfirm --clean
+
+      - name: PyInstaller (macOS — universal2 if possible)
+        if: runner.os == 'macOS'
+        run: |
+          python -m PyInstaller packaging/kdm.spec --noconfirm --clean --target-arch universal2 || {
+            echo "Universal2 build failed (Python/deps); falling back to single-arch for this runner."
+            python -m PyInstaller packaging/kdm.spec --noconfirm --clean
+          }
+
+      - name: Ad-hoc sign KDM.app (macOS)
+        if: runner.os == 'macOS'
+        run: codesign --force --sign - --deep dist/KDM.app
 
       - name: Prepare README
         shell: bash
@@ -62,6 +75,7 @@ jobs:
           mkdir -p "$STAGE"
           cp -R dist/KDM.app "$STAGE/KDM.app"
           cp dist/release/KDM-${VERSION}-README.txt "$STAGE/README-KDM.txt"
+          cp packaging/MAC_FIRST_LAUNCH.txt "$STAGE/MAC_FIRST_LAUNCH.txt"
           ln -sf /Applications "$STAGE/Applications"
           hdiutil create -volname "Kalupura Download Manager" -srcfolder "$STAGE" -ov -format UDZO "dist/release/KDM-${VERSION}-macOS.dmg"
           ditto -c -k --sequesterRsrc --keepParent "$STAGE" "dist/release/KDM-${VERSION}-macOS.zip"

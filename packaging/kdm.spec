@@ -9,6 +9,9 @@ from PyInstaller.utils.hooks import collect_all
 # SPECPATH is injected by PyInstaller (directory that contains this .spec file)
 ROOT = Path(SPECPATH).parent
 
+_ver_file = ROOT / "packaging" / "VERSION"
+APP_VER = _ver_file.read_text(encoding="utf-8").strip() if _ver_file.is_file() else "1.0.0"
+
 datas = [(str(ROOT / "translations.json"), ".")]
 cfg = ROOT / "kdm_config.json"
 if cfg.is_file():
@@ -78,5 +81,9 @@ if sys.platform == "darwin":
             "NSHighResolutionCapable": True,
             "CFBundleName": "KDM",
             "CFBundleDisplayName": "Kalupura Download Manager",
+            "CFBundleShortVersionString": APP_VER,
+            "CFBundleVersion": APP_VER,
+            "LSMinimumSystemVersion": "11.0",
+            "NSHumanReadableCopyright": "Copyright © Kalupura",
         },
     )
