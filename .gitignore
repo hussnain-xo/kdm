@@ -1,3 +1,5 @@
+.DS_Store
+
 # PyInstaller / local release builds (too large for GitHub; use Actions or Releases)
 dist/
 build/
