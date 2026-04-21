@@ -9,9 +9,9 @@
 #define MyAppName "Kalupura Download Manager"
 #define MyAppPublisher "Kalupura"
 #define MyAppExeName "KDM.exe"
-; Stable AppId for Programs & Features (literal GUID: {{ }} = one { } in output)
+; AppId = unique string (see Inno help: AppId=MyProgram). No { } — those break ISCC parsing.
 [Setup]
-AppId={{E8B4F2A1-3C9D-4E7F-8B1A-2D3E4F5A6B7C}}
+AppId=com.kalupura.kdm.E8B4F2A1
 AppName={#MyAppName}
 AppVersion={#MyAppVersion}
 AppVerName={#MyAppName} {#MyAppVersion}
