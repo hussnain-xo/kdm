@@ -33,8 +33,9 @@ jobs:
       - name: Install Python dependencies
         run: python -m pip install -r requirements-build.txt
 
-      - name: Install Playwright Chromium (optional runtime for users)
-        run: python -m playwright install chromium
+      # Do NOT run "playwright install chromium" before PyInstaller — it can pull ~100MB+ into
+      # the frozen app on Windows and push dist/release/*.zip or *.exe over GitHub's ~100MB
+      # per-artifact-file limit. Users run: playwright install chromium (see USER_QUICK_START).
 
       - name: Install Playwright system deps (Linux)
         if: runner.os == 'Linux'
@@ -42,15 +43,35 @@ jobs:
 
       - name: PyInstaller (Windows / Linux)
         if: runner.os != 'macOS'
+        env:
+          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: "1"
         run: python -m PyInstaller packaging/kdm.spec --noconfirm --clean
 
       - name: PyInstaller (macOS — universal2 if possible)
         if: runner.os == 'macOS'
+        env:
+          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: "1"
         run: |
           python -m PyInstaller packaging/kdm.spec --noconfirm --clean --target-arch universal2 || {
             echo "Universal2 build failed (Python/deps); falling back to single-arch for this runner."
             python -m PyInstaller packaging/kdm.spec --noconfirm --clean
           }
+
+      - name: Remove Playwright browser folders from dist (size / GitHub 100MB per file)
+        run: |
+          python -c "
+          import pathlib, shutil
+          root = pathlib.Path('dist')
+          if not root.exists():
+              raise SystemExit(0)
+          for p in sorted(root.rglob('*'), key=lambda x: len(x.parts), reverse=True):
+              if not p.is_dir():
+                  continue
+              n = p.name
+              if n.startswith('chromium-') or n.startswith('chromium_headless_shell-') or n.startswith('ffmpeg-') or n.startswith('webkit-'):
+                  shutil.rmtree(p, ignore_errors=True)
+                  print('removed', p)
+          "
 
       - name: Ad-hoc sign KDM.app (macOS)
         if: runner.os == 'macOS'
