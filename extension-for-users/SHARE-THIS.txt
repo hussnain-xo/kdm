@@ -1,0 +1,10 @@
+Tum user ko kya dena hai
+-------------------------
+  Option A: Poora folder "KDM-Browser-Extension" ZIP karke bhejo
+            (ya neeche wali ready ZIP use karo).
+
+  Option B: Sirf yeh ZIP bhejo jo scripts se banti hai:
+            KDM-Browser-Extension.zip (same folder ke andar)
+
+Chrome Web Store par publish karoge to user ko sirf link chahiye hogi —
+Developer mode / Load unpacked ki zaroorat nahi.

@@ -3,11 +3,21 @@ Version __VERSION__
 
 Same app for Windows, macOS, and Linux — 30-day trial starts automatically on first launch.
 
+Short user guide: see USER_QUICK_START.txt (same folder as this file in releases).
+
 RUN
-  • Windows: open the KDM folder, run KDM.exe
-  • macOS: open the .dmg, drag KDM.app to Applications. First launch: Control-click
-    KDM.app → Open (see MAC_FIRST_LAUNCH.txt in the disk image).
-  • Linux: extract the archive, run ./KDM/KDM
+  • Windows (recommended): run KDM-Setup-__VERSION__-x64.exe — installs under Program Files
+    and appears in Settings → Apps (Programs & Features). Portable: unzip and run KDM.exe.
+  • macOS: open the .dmg, drag KDM.app to Applications — or install the .pkg to /Applications.
+    First launch: Control-click KDM.app → Open (see MAC_FIRST_LAUNCH.txt in the disk image).
+  • Linux: sudo apt install ./kdm___VERSION___amd64.deb then run “KDM” from the menu,
+    or extract the .tar.gz and run ./KDM/KDM
+
+BROWSER EXTENSION (Chrome / Edge)
+  • The app includes folder “browser-extension” (Load unpacked). After install, run:
+    KDM --install-browser-extension
+    (opens the folder and chrome://extensions). Enable Developer mode, Load unpacked, pick
+    that folder. KDM must stay running for http://127.0.0.1:9669.
 
 AFTER INSTALL
   • Set your store link in kdm_config.json (next to the app) as "purchase_url" for Buy Now.

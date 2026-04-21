@@ -560,7 +560,7 @@ function injectAll() {
             injectKDM();
         } else if (hostname.indexOf('dailymotion.com') !== -1) {
             injectDailymotion();
-        } else if (/nyaa\.si|thepiratebay|piratebay|yts\.|yts-official|torrentgalaxy|1337x\.to/i.test(hostname)) {
+        } else if (/nyaa\.si|thepiratebay|piratebay|yts\.|yts-official|torrentgalaxy|1337x\.|eztv\.|limetorrent|torlock|torrentdownloads|yourbittorrent|zooqle|magnetdl|torrends|ettv|rarbg|kickass|katcr/i.test(hostname)) {
             injectTorrentSiteHandler();
         }
     } catch (e) { /* swallow so retries can run */ }

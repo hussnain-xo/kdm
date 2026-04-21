@@ -24,6 +24,7 @@ rm -rf "$REL"
 mkdir -p "$REL"
 
 sed "s/__VERSION__/${VERSION}/g" "$ROOT/packaging/INSTALL.template.txt" > "$REL/KDM-${VERSION}-README.txt"
+sed "s/__VERSION__/${VERSION}/g" "$ROOT/packaging/USER_QUICK_START.txt" > "$REL/USER_QUICK_START.txt"
 
 OS_UNAME="$(uname -s)"
 case "$OS_UNAME" in
@@ -38,6 +39,7 @@ case "$OS_UNAME" in
     mkdir -p "$STAGE"
     cp -R "$APP" "$STAGE/KDM.app"
     cp "$REL/KDM-${VERSION}-README.txt" "$STAGE/README-KDM.txt"
+    cp "$REL/USER_QUICK_START.txt" "$STAGE/USER_QUICK_START.txt"
     cp "$ROOT/packaging/MAC_FIRST_LAUNCH.txt" "$STAGE/MAC_FIRST_LAUNCH.txt"
     if [[ ! -e "$STAGE/Applications" ]]; then
       ln -sf /Applications "$STAGE/Applications"
@@ -50,6 +52,10 @@ case "$OS_UNAME" in
     rm -rf "$STAGE"
     echo "Built: $DMG"
     echo "Built: $ZIP"
+    chmod +x "$ROOT/scripts/build_macos_pkg.sh" "$ROOT/packaging/mac_pkg_scripts/postinstall" 2>/dev/null || true
+    if "$ROOT/scripts/build_macos_pkg.sh"; then
+      echo "Also built macOS .pkg (if pkgbuild succeeded)."
+    fi
     ;;
   Linux)
     if [[ ! -d "$ROOT/dist/KDM" ]]; then
@@ -57,9 +63,14 @@ case "$OS_UNAME" in
       exit 1
     fi
     cp "$REL/KDM-${VERSION}-README.txt" "$ROOT/dist/KDM/README-KDM.txt"
+    cp "$REL/USER_QUICK_START.txt" "$ROOT/dist/KDM/USER_QUICK_START.txt"
     ARCHIVE="$REL/KDM-${VERSION}-Linux-x86_64.tar.gz"
     tar -czvf "$ARCHIVE" -C "$ROOT/dist" KDM
     echo "Built: $ARCHIVE"
+    chmod +x "$ROOT/scripts/build_linux_deb.sh" 2>/dev/null || true
+    if command -v dpkg-deb >/dev/null 2>&1 && "$ROOT/scripts/build_linux_deb.sh"; then
+      echo "Also built .deb (if dpkg-deb succeeded)."
+    fi
     ;;
   *)
     echo "This script supports macOS and Linux only."

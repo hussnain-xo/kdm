@@ -1,5 +1,5 @@
-# Build the same KDM release layout on Windows, macOS, and Linux (IDM-style artifacts).
-# Artifacts: KDM-<version>-macOS.dmg/.zip, KDM-<version>-Linux-x86_64.tar.gz, KDM-<version>-Windows-x64.zip
+# Build KDM releases: portable folders + installers (Inno Setup EXE, macOS .pkg, Linux .deb).
+# Artifacts: DMG/ZIP, tar.gz, Windows zip + Setup EXE, optional .pkg / .deb
 name: Package KDM
 
 on:
@@ -63,6 +63,7 @@ jobs:
           VERSION=$(tr -d ' \t\r\n' < packaging/VERSION)
           mkdir -p dist/release
           sed "s/__VERSION__/${VERSION}/g" packaging/INSTALL.template.txt > dist/release/KDM-${VERSION}-README.txt
+          sed "s/__VERSION__/${VERSION}/g" packaging/USER_QUICK_START.txt > dist/release/USER_QUICK_START.txt
 
       - name: Package macOS
         if: runner.os == 'macOS'
@@ -75,11 +76,19 @@ jobs:
           mkdir -p "$STAGE"
           cp -R dist/KDM.app "$STAGE/KDM.app"
           cp dist/release/KDM-${VERSION}-README.txt "$STAGE/README-KDM.txt"
+          cp dist/release/USER_QUICK_START.txt "$STAGE/USER_QUICK_START.txt"
           cp packaging/MAC_FIRST_LAUNCH.txt "$STAGE/MAC_FIRST_LAUNCH.txt"
           ln -sf /Applications "$STAGE/Applications"
           hdiutil create -volname "Kalupura Download Manager" -srcfolder "$STAGE" -ov -format UDZO "dist/release/KDM-${VERSION}-macOS.dmg"
           ditto -c -k --sequesterRsrc --keepParent "$STAGE" "dist/release/KDM-${VERSION}-macOS.zip"
           rm -rf "$STAGE"
+
+      - name: macOS PKG installer
+        if: runner.os == 'macOS'
+        run: |
+          set -euo pipefail
+          chmod +x scripts/build_macos_pkg.sh packaging/mac_pkg_scripts/postinstall
+          ./scripts/build_macos_pkg.sh
 
       - name: Package Linux
         if: runner.os == 'Linux'
@@ -88,7 +97,10 @@ jobs:
           VERSION=$(tr -d ' \t\r\n' < packaging/VERSION)
           test -d dist/KDM
           cp dist/release/KDM-${VERSION}-README.txt dist/KDM/README-KDM.txt
+          cp dist/release/USER_QUICK_START.txt dist/KDM/USER_QUICK_START.txt
           tar -czvf "dist/release/KDM-${VERSION}-Linux-x86_64.tar.gz" -C dist KDM
+          chmod +x scripts/build_linux_deb.sh
+          ./scripts/build_linux_deb.sh
 
       - name: Package Windows
         if: runner.os == 'Windows'
@@ -97,7 +109,18 @@ jobs:
           $v = (Get-Content packaging/VERSION -Raw).Trim()
           if (-not (Test-Path "dist\KDM\KDM.exe")) { throw "KDM.exe missing" }
           Copy-Item "dist\release\KDM-$v-README.txt" "dist\KDM\README-KDM.txt" -Force
+          Copy-Item "dist\release\USER_QUICK_START.txt" "dist\KDM\USER_QUICK_START.txt" -Force
           Compress-Archive -Path "dist\KDM" -DestinationPath "dist\release\KDM-$v-Windows-x64.zip" -Force
+
+      - name: Windows Inno Setup (Programs & Features)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          choco install innosetup -y --no-progress
+          $v = (Get-Content packaging/VERSION -Raw).Trim()
+          $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+          if (-not (Test-Path $iscc)) { $iscc = "${env:ProgramFiles}\Inno Setup 6\ISCC.exe" }
+          & $iscc "/DMyAppVersion=$v" packaging\windows\KDM-Setup.iss
 
       - uses: actions/upload-artifact@v4
         with:

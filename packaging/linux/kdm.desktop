@@ -1,0 +1,10 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=Kalupura Download Manager
+Comment=Download manager with browser integration
+Exec=/opt/kdm/KDM
+Icon=/opt/kdm/browser-extension/icons/128.png
+Terminal=false
+Categories=Network;FileTransfer;
+Keywords=download;manager;KDM;

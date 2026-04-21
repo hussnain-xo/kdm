@@ -21,6 +21,10 @@ $readmeDest = Join-Path $Rel "KDM-$Version-README.txt"
 (Get-Content (Join-Path $RepoRoot "packaging\INSTALL.template.txt") -Raw) `
  -replace "__VERSION__", $Version | Set-Content -Path $readmeDest -Encoding utf8
 Copy-Item $readmeDest (Join-Path $RepoRoot "dist\KDM\README-KDM.txt") -Force
+$userQuick = Join-Path $Rel "USER_QUICK_START.txt"
+(Get-Content (Join-Path $RepoRoot "packaging\USER_QUICK_START.txt") -Raw) `
+    -replace "__VERSION__", $Version | Set-Content -Path $userQuick -Encoding utf8
+Copy-Item $userQuick (Join-Path $RepoRoot "dist\KDM\USER_QUICK_START.txt") -Force
 
 $zipPath = Join-Path $Rel "KDM-$Version-Windows-x64.zip"
 if (Test-Path $zipPath) { Remove-Item $zipPath -Force }

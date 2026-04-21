@@ -1,6 +1,7 @@
 {
   "language": "English",
   "show_delete_confirm": true,
+  "first_run_extension_offer_shown": false,
   "purchase_url": "",
   "distribution_page": ""
 }

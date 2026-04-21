@@ -27,7 +27,7 @@ from kdm.licensing import LicenseGate, run_startup_license_check, show_license_b
 warnings.filterwarnings("ignore", message=".*Python version 3.9 has been deprecated.*")
 import yt_dlp
 from PyQt6.QtWidgets import (
-    QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
+    QWidget, QApplication, QMainWindow, QVBoxLayout, QHBoxLayout,
     QLabel, QToolButton, QTableWidget, QTableWidgetItem, QHeaderView,
     QStatusBar, QSpacerItem, QSizePolicy, QProgressBar, QInputDialog,
     QMessageBox, QFrame, QComboBox, QDialog, QDialogButtonBox, QCheckBox,
@@ -576,6 +576,31 @@ def _is_torrent_by_title(title: str) -> bool:
 def _aria2_available() -> bool:
     """True if aria2c is installed (used for built-in torrent download)."""
     return bool(shutil.which("aria2c"))
+
+
+def _largest_video_path(root: str) -> Optional[str]:
+    """Largest video file under folder (typical torrent output) for open-with-default-app."""
+    if not root or not os.path.isdir(root):
+        return None
+    exts = {".mp4", ".mkv", ".avi", ".mov", ".webm", ".m4v", ".wmv", ".mpg", ".mpeg"}
+    best: Optional[str] = None
+    best_sz = -1
+    try:
+        for dirpath, _dirs, files in os.walk(root):
+            for f in files:
+                p = os.path.join(dirpath, f)
+                try:
+                    if os.path.splitext(f)[1].lower() in exts:
+                        sz = os.path.getsize(p)
+                        if sz > best_sz:
+                            best_sz = sz
+                            best = p
+                except OSError:
+                    continue
+    except OSError:
+        return None
+    return best
+
 
 def _parse_aria2_progress(line: str):
     """Parse aria2 console line (HTTP or BT). Returns (downloaded_bytes, total_bytes, speed_bps) or None."""
@@ -1315,6 +1340,8 @@ class Job:
             "--summary-interval=1",
             "--allow-overwrite=true",
             "--bt-stop-timeout=600",
+            # Exit when download is done — default aria2 keeps seeding so stdout never closes and KDM stays at 100%.
+            "--seed-time=0",
             "--bt-tracker=" + trackers,
         ]
         if is_magnet:
@@ -2611,7 +2638,15 @@ class DownloadStatusWindow(QDialog):
                 name = (j.get("name") or self.download_info.get("filename") or "").strip()
                 out_dir = j.get("out_dir")
                 if "(torrent content" in name.lower() and out_dir and os.path.isdir(out_dir):
-                    if sys.platform.startswith("win"):
+                    play = _largest_video_path(out_dir)
+                    if play:
+                        if sys.platform.startswith("win"):
+                            os.startfile(play)
+                        elif sys.platform == "darwin":
+                            subprocess.run(["open", play])
+                        else:
+                            subprocess.run(["xdg-open", play])
+                    elif sys.platform.startswith("win"):
                         os.startfile(out_dir)
                     elif sys.platform == "darwin":
                         subprocess.run(["open", out_dir])
@@ -2795,8 +2830,11 @@ class CustomTitleBar(QWidget):
         layout.setContentsMargins(10, 0, 8, 0)
         layout.setSpacing(6)
 
-        self.k_label = QLabel("K")
-        self.k_label.setStyleSheet("color:white; font:bold 13pt 'Segoe UI'; background:transparent;")
+        self.k_label = QLabel("KDM")
+        self.k_label.setStyleSheet(
+            "color:white; font:bold 11pt 'Segoe UI'; background:transparent; letter-spacing:1px;"
+        )
+        self.k_label.setMinimumWidth(42)
         layout.addWidget(self.k_label)
 
         self.title = QLabel("Kalupura Download Manager (KDM)")
@@ -2837,7 +2875,7 @@ class KDM(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowFlags(Qt.WindowType.FramelessWindowHint)
-        self.setMinimumSize(1150, 620)
+        self.setMinimumSize(1160, 620)
         self.setStyleSheet("background:#111; color:white;")
 
         self.m = Manager()
@@ -2847,6 +2885,7 @@ class KDM(QMainWindow):
         cfg = self._load_config()
         self.language = cfg.get("language", "English")
         self.show_delete_confirm = cfg.get("show_delete_confirm", True)
+        self.first_run_extension_offer_shown = cfg.get("first_run_extension_offer_shown", False)
         self.language_dropdown = None
         self.just_stopped_ids = set()
 
@@ -2914,14 +2953,16 @@ class KDM(QMainWindow):
         is_torrent = "(torrent content" in name or "magnet link" in name
         if is_torrent and out_dir and os.path.isdir(out_dir):
             try:
+                play = _largest_video_path(out_dir)
+                target = play or out_dir
                 if sys.platform.startswith("win"):
-                    os.startfile(out_dir)
+                    os.startfile(target)
                 elif sys.platform == "darwin":
-                    subprocess.run(["open", out_dir])
+                    subprocess.run(["open", target])
                 else:
-                    subprocess.run(["xdg-open", out_dir])
+                    subprocess.run(["xdg-open", target])
             except Exception as e:
-                QMessageBox.warning(self, "Open", f"Could not open folder: {e}")
+                QMessageBox.warning(self, "Open", f"Could not open: {e}")
             return
         self._open_file(job_data)
 
@@ -3033,7 +3074,7 @@ class KDM(QMainWindow):
                 return json.load(open(CONFIG_FILE, "r", encoding="utf-8"))
             except:
                 pass
-        return {"language": "English", "show_delete_confirm": True}
+        return {"language": "English", "show_delete_confirm": True, "first_run_extension_offer_shown": False}
 
     def _save_config(self):
         cfg = {}
@@ -3045,8 +3086,29 @@ class KDM(QMainWindow):
                 cfg = {}
         cfg["language"] = self.language
         cfg["show_delete_confirm"] = self.show_delete_confirm
+        cfg["first_run_extension_offer_shown"] = self.first_run_extension_offer_shown
         with open(CONFIG_FILE, "w", encoding="utf-8") as f:
             json.dump(cfg, f, indent=2)
+
+    def _maybe_first_run_browser_extension(self):
+        if self.first_run_extension_offer_shown:
+            return
+        if not (_kdm_install_dir() / "browser-extension" / "manifest.json").is_file():
+            self.first_run_extension_offer_shown = True
+            self._save_config()
+            return
+        r = QMessageBox.question(
+            self,
+            "KDM — Browser integration",
+            "Send downloads from Chrome or Edge to KDM?\n\n"
+            "Quick one-time setup (like other download managers).",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.Yes,
+        )
+        self.first_run_extension_offer_shown = True
+        self._save_config()
+        if r == QMessageBox.StandardButton.Yes:
+            _browser_extension_do_setup(self)
 
     def tr(self, key):
         return self.translations.get(self.language, {}).get(
@@ -3084,21 +3146,27 @@ class KDM(QMainWindow):
     def _toolbar(self):
         bar = QWidget()
         h = QHBoxLayout(bar)
-        h.setContentsMargins(12, 8, 12, 8)
-        h.setSpacing(20)
+        h.setContentsMargins(8, 8, 8, 8)
+        h.setSpacing(5)
         bar.setStyleSheet("background:#0c0c0c; border-bottom:1px solid #222;")
+
+        # Equal-width buttons that grow with the window so the toolbar row stays full; fixed height.
+        _tb_h, _ico = 76, 34
 
         def mk(icon_char, key, fn):
             b = QToolButton()
             b.setToolButtonStyle(Qt.ToolButtonStyle.ToolButtonTextUnderIcon)
-            b.setFixedSize(95, 70)
-            b.setIconSize(QSize(34, 34))
+            b.setFixedHeight(_tb_h)
+            b.setMinimumWidth(72)
+            b.setIconSize(QSize(_ico, _ico))
+            b.setFont(QFont("Segoe UI", 9))
+            b.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
 
-            pm = QPixmap(34, 34)
+            pm = QPixmap(_ico, _ico)
             pm.fill(Qt.GlobalColor.transparent)
             p = QPainter(pm)
             p.setPen(QColor("#7cc8ff"))
-            p.setFont(QFont("Segoe UI Symbol", 22))
+            p.setFont(QFont("Segoe UI Symbol", 20))
             p.drawText(pm.rect(), Qt.AlignmentFlag.AlignCenter, icon_char)
             p.end()
 
@@ -3106,16 +3174,18 @@ class KDM(QMainWindow):
             b.clicked.connect(fn)
             b.setStyleSheet("""
                 QToolButton {
-                    background:#111; color:white; border:1px solid #1a1a1a; border-radius:6px;
+                    background:#111; color:#eee; border:1px solid #252525; border-radius:6px;
+                    font-size:9pt; padding:3px 2px;
                 }
                 QToolButton:hover {
                     background:qradialgradient(cx:0.5,cy:0.5,radius:1,
-                        stop:0 rgba(120,200,255,40%), stop:1 rgba(0,0,0,0));
+                        stop:0 rgba(120,200,255,35%), stop:1 rgba(0,0,0,0));
                     border:1px solid #4da6ff;
+                    color:white;
                 }
                 QToolButton:pressed { background:#0a3d5a; border:1px solid #4da6ff; }
             """)
-            h.addWidget(b)
+            h.addWidget(b, 1)
             return key, b
 
         self.btns = {}
@@ -3136,21 +3206,6 @@ class KDM(QMainWindow):
             k, b = mk(icon, key, fn)
             self.btns[k] = b
 
-        if "Buy Now" in self.btns:
-            bn = self.btns["Buy Now"]
-            bn.setStyleSheet("""
-                QToolButton {
-                    background:#142914; color:#b8f0c8; border:1px solid #2d7a3e; border-radius:6px;
-                }
-                QToolButton:hover {
-                    background:qlineargradient(x1:0,y1:0,x2:0,y2:1,stop:0 #1f4a28,stop:1 #142914);
-                    border:1px solid #4ddb82;
-                }
-                QToolButton:pressed { background:#0d1f12; border:1px solid #2d7a3e; }
-            """)
-            bn.setToolTip(self.tr("buy_now_tooltip"))
-
-        h.addItem(QSpacerItem(20, 20, QSizePolicy.Policy.Expanding))
         return bar
 
     def _open_downloads_folder(self):
@@ -3939,15 +3994,82 @@ class KDM(QMainWindow):
         t.blockSignals(False)
         t.setUpdatesEnabled(True)
 
+
+def _kdm_install_dir():
+    from pathlib import Path
+
+    if getattr(sys, "frozen", False):
+        return Path(sys.executable).resolve().parent
+    return Path(__file__).resolve().parent
+
+
+def _set_first_run_extension_offer_done_in_config():
+    """So the main app does not show the first-run browser prompt again (e.g. after installer wizard)."""
+    cfg = {}
+    if os.path.isfile(CONFIG_FILE):
+        try:
+            with open(CONFIG_FILE, "r", encoding="utf-8") as f:
+                cfg = json.load(f)
+        except Exception:
+            cfg = {}
+    cfg["first_run_extension_offer_shown"] = True
+    with open(CONFIG_FILE, "w", encoding="utf-8") as f:
+        json.dump(cfg, f, indent=2)
+
+
+def _browser_extension_do_setup(parent: Optional[QWidget]) -> bool:
+    """Open bundled extension folder + browser pages; show steps. Returns False if files missing."""
+    import webbrowser
+
+    ext_root = _kdm_install_dir() / "browser-extension"
+    if not (ext_root / "manifest.json").is_file():
+        QMessageBox.warning(
+            parent,
+            "KDM — Browser extension",
+            "Bundled extension not found next to this app.\n\n"
+            f"Expected:\n{ext_root / 'manifest.json'}",
+        )
+        return False
+    QDesktopServices.openUrl(QUrl.fromLocalFile(str(ext_root.resolve())))
+    if sys.platform == "win32":
+        webbrowser.open("chrome://extensions/")
+        webbrowser.open("edge://extensions/")
+    else:
+        webbrowser.open("chrome://extensions/")
+    QMessageBox.information(
+        parent,
+        "KDM — Browser extension",
+        "In Chrome or Edge:\n"
+        "1) Turn ON Developer mode.\n"
+        "2) Click Load unpacked.\n"
+        "3) Select the folder that just opened (browser-extension).\n\n"
+        "Keep KDM running so the extension can use http://127.0.0.1:9669",
+    )
+    return True
+
+
+def _run_browser_extension_wizard(app: QApplication) -> None:
+    """CLI / installer: open extension setup then exit."""
+    if not _browser_extension_do_setup(None):
+        sys.exit(1)
+    _set_first_run_extension_offer_done_in_config()
+    sys.exit(0)
+
+
 # ---- entry ----
 if __name__ == "__main__":
     if "--test-hls" in sys.argv:
         _selftest_hls_parser()
         print("[KDM] --test-hls OK")
         sys.exit(0)
+    if "--install-browser-extension" in sys.argv:
+        _app = QApplication(sys.argv)
+        _run_browser_extension_wizard(_app)
+
     app = QApplication(sys.argv)
     if not run_startup_license_check(app):
         sys.exit(0)
     win = KDM()
     win.show()
+    QTimer.singleShot(900, win._maybe_first_run_browser_extension)
     sys.exit(app.exec())

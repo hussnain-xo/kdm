@@ -1,0 +1,4 @@
+#!/bin/bash
+# After installing KDM.app to /Applications — browser extension lives inside the app bundle:
+# KDM.app/Contents/MacOS/../browser-extension (PyInstaller COLLECT layout) — verify at runtime.
+exit 0

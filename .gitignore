@@ -1,10 +1,17 @@
 .DS_Store
 
+# Python — never push virtualenv (Playwright alone is >100MB; GitHub rejects)
+.venv/
+venv/
+__pycache__/
+*.pyc
+
 # PyInstaller / local release builds (too large for GitHub; use Actions or Releases)
 dist/
 build/
 *.dmg
 *.zip
+!extension-for-users/KDM-Browser-Extension.zip
 *.tar.gz
 
 # Build and Release Folders

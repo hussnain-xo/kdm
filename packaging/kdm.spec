@@ -17,6 +17,17 @@ cfg = ROOT / "kdm_config.json"
 if cfg.is_file():
     datas.append((str(cfg), "."))
 
+# Ship unpacked Chrome/Edge extension next to the app (Load unpacked → this folder).
+_ext = ROOT / "extension-for-users" / "KDM-Browser-Extension"
+if _ext.is_dir():
+    for _p in _ext.rglob("*"):
+        if _p.is_file():
+            _rel = _p.relative_to(_ext)
+            _dest = str(Path("browser-extension") / _rel.parent).replace("\\", "/")
+            datas.append((str(_p), _dest))
+else:
+    print(f"WARNING: {_ext} missing — browser extension will not be bundled.")
+
 datas_pyqt, binaries_pyqt, hidden_pyqt = collect_all("PyQt6")
 
 a = Analysis(

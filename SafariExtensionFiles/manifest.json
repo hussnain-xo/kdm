@@ -10,12 +10,15 @@
     "downloads",
     "storage",
     "notifications",
-    "contextMenus"
+    "contextMenus",
+    "cookies",
+    "webRequest"
   ],
 
   "host_permissions": [
     "http://127.0.0.1:9669/*",
-    "http://localhost:9669/*"
+    "http://localhost:9669/*",
+    "<all_urls>"
   ],
 
   "background": {
@@ -52,6 +55,40 @@
       ],
       "js": ["content.js"],
       "run_at": "document_idle",
+      "all_frames": false
+    },
+    {
+      "matches": [
+        "https://nyaa.si/*",
+        "https://*.nyaa.si/*",
+        "https://thepiratebay.org/*",
+        "https://*.thepiratebay.org/*",
+        "https://thepiratebay.party/*",
+        "https://tpb.party/*",
+        "https://www.yts-official.top/*",
+        "https://yts-official.top/*",
+        "https://yts.mx/*",
+        "https://yts.lt/*",
+        "https://*.yts.mx/*",
+        "https://torrentgalaxy.to/*",
+        "https://*.torrentgalaxy.to/*",
+        "https://1337x.to/*",
+        "https://*.1337x.to/*",
+        "https://1337x.st/*",
+        "https://*.1337x.st/*",
+        "https://eztv.re/*",
+        "https://*.eztv.re/*",
+        "https://www.limetorrents.lol/*",
+        "https://*.limetorrents.lol/*",
+        "https://www.torlock.com/*",
+        "https://*.torlock.com/*",
+        "https://www.torrentdownloads.me/*",
+        "https://*.torrentdownloads.me/*",
+        "https://yourbittorrent.com/*",
+        "https://*.yourbittorrent.com/*"
+      ],
+      "js": ["content.js"],
+      "run_at": "document_end",
       "all_frames": false
     }
   ],
