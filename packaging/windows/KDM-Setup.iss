@@ -9,12 +9,9 @@
 #define MyAppName "Kalupura Download Manager"
 #define MyAppPublisher "Kalupura"
 #define MyAppExeName "KDM.exe"
-; Stable ID so upgrades replace the same ARP entry (Programs & Features)
-; In .iss, use {{ and }} for literal braces (else {GUID} is parsed as a constant).
-#define MyAppGuid "{{E8B4F2A1-3C9D-4E7F-8B1A-2D3E4F5A6B7C}}"
-
+; Stable AppId for Programs & Features (literal GUID: {{ }} = one { } in output)
 [Setup]
-AppId={#MyAppGuid}
+AppId={{E8B4F2A1-3C9D-4E7F-8B1A-2D3E4F5A6B7C}}
 AppName={#MyAppName}
 AppVersion={#MyAppVersion}
 AppVerName={#MyAppName} {#MyAppVersion}
@@ -24,7 +21,6 @@ DefaultGroupName={#MyAppName}
 AllowNoIcons=yes
 OutputDir=..\..\dist\release
 OutputBaseFilename=KDM-Setup-{#MyAppVersion}-x64
-SetupIconFile=
 Compression=lzma2
 SolidCompression=yes
 WizardStyle=modern
