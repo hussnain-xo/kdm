@@ -137,13 +137,23 @@ jobs:
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
-          $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
-          if (-not (Test-Path $iscc)) { $iscc = "${env:ProgramFiles}\Inno Setup 6\ISCC.exe" }
-          if (-not (Test-Path $iscc)) {
-            choco install innosetup -y --no-progress --ignore-checksums
+          $candidates = @(
+            "C:\Program Files (x86)\Inno Setup 6\ISCC.exe",
+            "C:\Program Files\Inno Setup 6\ISCC.exe",
+            "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe",
+            "${env:ProgramFiles}\Inno Setup 6\ISCC.exe"
+          )
+          $iscc = $candidates | Where-Object { Test-Path $_ } | Select-Object -First 1
+          if (-not $iscc) {
+            Write-Host "ISCC not on disk; running choco (ignore non-zero if already installed)..."
+            cmd /c "choco install innosetup -y --no-progress 2>nul"
+            $iscc = $candidates | Where-Object { Test-Path $_ } | Select-Object -First 1
           }
-          if (-not (Test-Path $iscc)) { throw "ISCC.exe not found after install attempt" }
+          if (-not $iscc) { throw "ISCC.exe not found. Install Inno Setup 6." }
           $v = (Get-Content packaging/VERSION -Raw).Trim()
+          Write-Host "--- KDM-Setup.iss (first 24 lines) ---"
+          Get-Content packaging\windows\KDM-Setup.iss -TotalCount 24
+          Write-Host "--- compiling with /DMyAppVersion=$v ---"
           & $iscc "/DMyAppVersion=$v" packaging\windows\KDM-Setup.iss
           if ($LASTEXITCODE -ne 0) { throw "Inno Setup compile failed with exit code $LASTEXITCODE" }
 
