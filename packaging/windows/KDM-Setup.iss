@@ -10,7 +10,8 @@
 #define MyAppPublisher "Kalupura"
 #define MyAppExeName "KDM.exe"
 ; Stable ID so upgrades replace the same ARP entry (Programs & Features)
-#define MyAppGuid "{E8B4F2A1-3C9D-4E7F-8B1A-2D3E4F5A6B7C}"
+; In .iss, use {{ and }} for literal braces (else {GUID} is parsed as a constant).
+#define MyAppGuid "{{E8B4F2A1-3C9D-4E7F-8B1A-2D3E4F5A6B7C}}"
 
 [Setup]
 AppId={#MyAppGuid}
