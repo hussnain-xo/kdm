@@ -7,7 +7,8 @@ Kalupura Download Manager — release builds
 2) Build on each target OS (PyInstaller does not cross-compile):
    Windows (folder + zip):     scripts\build_windows.bat
    Windows (installer EXE):    scripts\build_windows_installer.ps1
-                               Requires Inno Setup 6 (Programs & Features uninstall).
+                               (Inno; Programs & Features). MS-style MSI: scripts\build_windows_msi.ps1
+                               (WiX Toolset 3.11+; choco: wixtoolset; runs after dist\KDM exists).
    macOS:    chmod +x scripts/build_macos.sh && ./scripts/build_macos.sh
    Linux:    chmod +x scripts/build_linux.sh && ./scripts/build_linux.sh
 
@@ -18,8 +19,10 @@ Kalupura Download Manager — release builds
    USER_QUICK_START.txt. First app launch shows a one-time “Browser integration” prompt.
 
 4) Outputs:
-   Windows: dist\KDM\KDM.exe — portable folder; dist\release\KDM-Setup-<ver>-x64.exe — installer
-              (installs under Program Files, includes browser-extension next to KDM.exe).
+   Windows: dist\KDM\KDM.exe — portable folder; KDM-Setup-<ver>-x64.exe (Inno) and
+              KDM-<ver>-x64.msi (WiX: Welcome, license, install folder) — same files under
+              Program Files, browser-extension beside KDM.exe. IDM-style “invisible” Chrome
+              extension needs Web Store / enterprise policy; see USER_QUICK_START.
    macOS:   dist/release/KDM-<ver>-macOS.dmg — drag KDM.app to Applications
             dist/release/KDM-Setup-<ver>-macOS.pkg — installs into /Applications (optional)
    Linux:   dist/release/KDM-<ver>-Linux-x86_64.tar.gz — extract and run ./KDM/KDM

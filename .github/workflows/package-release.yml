@@ -157,6 +157,12 @@ jobs:
           & $iscc "/DMyAppVersion=$v" packaging\windows\KDM-Setup.iss
           if ($LASTEXITCODE -ne 0) { throw "Inno Setup compile failed with exit code $LASTEXITCODE" }
 
+      - name: Windows MSI (WiX — Welcome / license / install dir)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          powershell -ExecutionPolicy Bypass -File scripts\build_windows_msi.ps1
+
       - uses: actions/upload-artifact@v5
         with:
           name: KDM-${{ matrix.label }}

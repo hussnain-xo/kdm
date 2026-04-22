@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- WiX 3.11+ — WixUI_InstallDir: Welcome, EULA, pick folder, install, finish. -->
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+  <Product Id="*"
+           Name="Kalupura Download Manager (KDM)"
+           Language="1033"
+           Version="$(var.KdmVersion)"
+           Manufacturer="Kalupura"
+           UpgradeCode="8E4C2B1A-0F3D-4E5A-9B6C-7D8E0F1A2B3C">
+    <Package InstallerVersion="200" Compressed="yes" InstallScope="perMachine" InstallPrivileges="elevated" Platform="x64" />
+    <MajorUpgrade
+      DowngradeErrorMessage="A newer version of KDM is already installed."
+      AllowSameVersionUpgrades="no" />
+    <MediaTemplate EmbedCab="yes" />
+    <Icon Id="KDM.exe" SourceFile="dist\KDM\KDM.exe" />
+    <Property Id="ARPPRODUCTICON" Value="KDM.exe" />
+    <Property Id="WIXUI_INSTALLDIR" Value="INSTALLFOLDER" />
+    <UI>
+      <UIRef Id="WixUI_InstallDir" />
+    </UI>
+    <WixVariable Id="WixUILicenseRtf" Value="License.rtf" />
+    <Feature Id="KdmApp" Title="Kalupura Download Manager" Level="1">
+      <ComponentGroupRef Id="KdmHarvest" />
+    </Feature>
+  </Product>
+  <Fragment>
+    <Directory Id="TARGETDIR" Name="SourceDir">
+      <Directory Id="ProgramFiles64Folder">
+        <Directory Id="INSTALLFOLDER" Name="Kalupura Download Manager" />
+      </Directory>
+    </Directory>
+  </Fragment>
+</Wix>
