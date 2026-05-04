@@ -9,6 +9,12 @@ Set-Location $Root
 if (-not (Test-Path "dist\KDM\KDM.exe")) { Write-Error "dist\KDM\KDM.exe not found. Run PyInstaller first." }
 
 $v = (Get-Content (Join-Path $Root "packaging\VERSION") -Raw).Trim()
+if (-not $v) { Write-Error "packaging\VERSION is empty." }
+# WiX Product/@Version must be x.x.x.x with each part 0..65534 (not just semver x.y.z).
+$verParts = @($v -split '\.' | ForEach-Object { $_ })
+while ($verParts.Count -lt 4) { $verParts += '0' }
+if ($verParts.Count -gt 4) { $verParts = $verParts[0..3] }
+$vWix = ($verParts -join '.')
 $wixRoot = $null
 foreach ($c in @(
     "C:\Program Files (x86)\WiX Toolset v3.14\bin",
@@ -33,6 +39,8 @@ $Obj = Join-Path $Root "packaging\wix\obj"
 New-Item -ItemType Directory -Force $Obj | Out-Null
 $heatOut = Join-Path $Obj "HeatKdm.wxs"
 $msiOut  = Join-Path $Root "dist\release\KDM-$v-x64.msi"
+$candleOutDir = Join-Path $Obj ""
+if (-not $candleOutDir.EndsWith('\')) { $candleOutDir += '\' }
 
 # Harvest all files from dist\KDM into ComponentGroup KdmHarvest
 & $heat dir (Join-Path $Root "dist\KDM") -nologo -o $heatOut `
@@ -40,10 +48,9 @@ $msiOut  = Join-Path $Root "dist\release\KDM-$v-x64.msi"
 if ($LASTEXITCODE -ne 0) { throw "heat.exe failed" }
 
 # Compile (KdmVersion + arch x64; License.rtf is next to KDM.Main.wxs)
-$wxsObj = Join-Path $Obj "KDM.Main.wixobj"
-$heatObj = Join-Path $Obj "HeatKdm.wixobj"
 $mainWxs = Join-Path $Root "packaging\wix\KDM.Main.wxs"
-& $candle -nologo -arch x64 -dKdmVersion=$v -o "$Obj\" $mainWxs $heatOut
+# Quoted -d and a safe -o path: "$Obj\" breaks PowerShell quoting and can corrupt args passed to candle.
+& $candle -nologo -arch x64 "-dKdmVersion=$vWix" -o $candleOutDir $mainWxs $heatOut
 if ($LASTEXITCODE -ne 0) { throw "candle failed" }
 
 $wixobjs = Get-ChildItem -Path $Obj -Filter *.wixobj
