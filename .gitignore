@@ -1,5 +1,8 @@
 .DS_Store
 
+# WiX — generated during MSI build (do not commit)
+packaging/wix/KDM.Main.built.wxs
+
 # Python — never push virtualenv (Playwright alone is >100MB; GitHub rejects)
 .venv/
 venv/

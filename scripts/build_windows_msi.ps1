@@ -15,6 +15,9 @@ $verParts = @($v -split '\.' | ForEach-Object { $_ })
 while ($verParts.Count -lt 4) { $verParts += '0' }
 if ($verParts.Count -gt 4) { $verParts = $verParts[0..3] }
 $vWix = ($verParts -join '.')
+if ($vWix -notmatch '^\d+(\.\d+){3}$') {
+  Write-Error "WiX Product version must be four integers (e.g. 1.0.0.0); got: $vWix"
+}
 $wixRoot = $null
 foreach ($c in @(
     "C:\Program Files (x86)\WiX Toolset v3.14\bin",
@@ -47,10 +50,22 @@ if (-not $candleOutDir.EndsWith('\')) { $candleOutDir += '\' }
   -cg KdmHarvest -gg -g1 -scom -sreg -ke -dr INSTALLFOLDER -platform x64
 if ($LASTEXITCODE -ne 0) { throw "heat.exe failed" }
 
-# Compile (KdmVersion + arch x64; License.rtf is next to KDM.Main.wxs)
+# Compile: bake version into a generated .wxs so we do not rely on candle -d (avoids CI arg/quoting bugs).
 $mainWxs = Join-Path $Root "packaging\wix\KDM.Main.wxs"
-# Quoted -d and a safe -o path: "$Obj\" breaks PowerShell quoting and can corrupt args passed to candle.
-& $candle -nologo -arch x64 "-dKdmVersion=$vWix" -o $candleOutDir $mainWxs $heatOut
+$mainWxsBuilt = Join-Path $Root "packaging\wix\KDM.Main.built.wxs"
+$token = '$(var.KdmVersion)'
+$wxsText = Get-Content -LiteralPath $mainWxs -Raw -Encoding utf8
+if ($wxsText.IndexOf($token, [System.StringComparison]::Ordinal) -lt 0) {
+  Write-Error "KDM.Main.wxs must contain $token for Product/@Version."
+}
+$wxsBuilt = $wxsText.Replace($token, $vWix)
+# Built wxs lives under obj/; resolve Icon path to absolute so candle finds KDM.exe.
+$kdmExeAbs = ((Resolve-Path (Join-Path $Root "dist\KDM\KDM.exe")).Path) -replace '\\', '/'
+$wxsBuilt = $wxsBuilt.Replace('SourceFile="dist\KDM\KDM.exe"', ('SourceFile="{0}"' -f $kdmExeAbs))
+$utf8NoBom = New-Object System.Text.UTF8Encoding $false
+[System.IO.File]::WriteAllText($mainWxsBuilt, $wxsBuilt, $utf8NoBom)
+
+& $candle -nologo -arch x64 -o $candleOutDir $mainWxsBuilt $heatOut
 if ($LASTEXITCODE -ne 0) { throw "candle failed" }
 
 $wixobjs = Get-ChildItem -Path $Obj -Filter *.wixobj
