@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- WiX 3.11+ — WixUI_InstallDir: Welcome, EULA, pick folder, install, finish. -->
+<!-- WiX 3.11+ — WixUI_InstallDir. __KDM_PRODUCT_VERSION__ replaced when building MSI (scripts/build_windows_msi.ps1). -->
 <Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
   <Product Id="*"
            Name="Kalupura Download Manager (KDM)"
            Language="1033"
-           Version="$(var.KdmVersion)"
+           Version="__KDM_PRODUCT_VERSION__"
            Manufacturer="Kalupura"
            UpgradeCode="8E4C2B1A-0F3D-4E5A-9B6C-7D8E0F1A2B3C">
     <Package InstallerVersion="200" Compressed="yes" InstallScope="perMachine" InstallPrivileges="elevated" Platform="x64" />

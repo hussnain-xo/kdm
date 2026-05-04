@@ -164,6 +164,19 @@ jobs:
           & $iscc "/DMyAppVersion=$v" packaging\windows\KDM-Setup.iss
           if ($LASTEXITCODE -ne 0) { throw "Inno Setup compile failed with exit code $LASTEXITCODE" }
 
+      - name: WiX — template + MSI script must be current
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $wxs = Get-Content packaging/wix/KDM.Main.wxs -Raw
+          if ($wxs -notmatch '__KDM_PRODUCT_VERSION__') {
+            throw "packaging/wix/KDM.Main.wxs must contain __KDM_PRODUCT_VERSION__ (push latest from your machine)."
+          }
+          $ps1 = Get-Content scripts/build_windows_msi.ps1 -Raw
+          if ($ps1 -notmatch 'KDM\.Main\.built\.wxs') {
+            throw "scripts/build_windows_msi.ps1 must build KDM.Main.built.wxs — push latest script."
+          }
+
       - name: Windows MSI (WiX — Welcome / license / install dir)
         if: runner.os == 'Windows'
         shell: pwsh
