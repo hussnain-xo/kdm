@@ -135,10 +135,13 @@ jobs:
           Copy-Item "dist\release\USER_QUICK_START.txt" "dist\KDM\USER_QUICK_START.txt" -Force
           Compress-Archive -Path "dist\KDM" -DestinationPath "dist\release\KDM-$v-Windows-x64.zip" -Force
 
-      - name: Pack Chrome extension CRX (policy install, no Web Store)
+      - name: Pack Chrome extension CRX (skipped on CI — optional for local policy builds)
         if: runner.os == 'Windows'
         shell: pwsh
-        run: powershell -ExecutionPolicy Bypass -File scripts\pack_kdm_crx.ps1
+        continue-on-error: true
+        run: |
+          Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
+          .\scripts\pack_kdm_crx.ps1
 
       - name: Windows Inno Setup (Programs & Features)
         if: runner.os == 'Windows'
