@@ -53,7 +53,7 @@ if ($LASTEXITCODE -ne 0) { throw "heat.exe failed" }
 # Compile: bake version into a generated .wxs so we do not rely on candle -d (avoids CI arg/quoting bugs).
 $mainWxs = Join-Path $Root "packaging\wix\KDM.Main.wxs"
 $mainWxsBuilt = Join-Path $Root "packaging\wix\KDM.Main.built.wxs"
-$token = '$(var.KdmVersion)'
+$token = '__KDM_PRODUCT_VERSION__'
 $wxsText = Get-Content -LiteralPath $mainWxs -Raw -Encoding utf8
 if ($wxsText.IndexOf($token, [System.StringComparison]::Ordinal) -lt 0) {
   Write-Error "KDM.Main.wxs must contain $token for Product/@Version."
