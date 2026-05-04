@@ -1,5 +1,5 @@
 ================================================================================
-  Kalupura Download Manager (KDM) — Browser extension (Chrome / Edge)
+  Kalupura Download Manager (KDM) — Browser extension (Chrome / Edge / Firefox)
 ================================================================================
 
 BEFORE YOU START
@@ -24,6 +24,15 @@ MICROSOFT EDGE
   2. Open Edge and go to:  edge://extensions
   3. Turn ON “Developer mode” (left side).
   4. Click “Load unpacked” and choose the “KDM-Browser-Extension” folder.
+
+--------------------------------------------------------------------------------
+MOZILLA FIREFOX (Manifest V3 — same folder as Chrome)
+--------------------------------------------------------------------------------
+  1. Open Firefox 128+ (same extension files: manifest.json + scripts in this folder).
+  2. Address bar:  about:debugging#/runtime/this-firefox
+  3. Click “Load Temporary Add-on…” and select manifest.json inside KDM-Browser-Extension.
+  Note: Temporary add-ons clear when Firefox fully exits — use again next session,
+  or Mozilla enterprise policies for permanent install.
 
 --------------------------------------------------------------------------------
 TROUBLESHOOTING

@@ -32,7 +32,7 @@ from PyQt6.QtWidgets import (
     QStatusBar, QSpacerItem, QSizePolicy, QProgressBar, QInputDialog,
     QMessageBox, QFrame, QComboBox, QDialog, QDialogButtonBox, QCheckBox,
     QMenu, QGroupBox, QGridLayout, QLineEdit, QPushButton, QTextEdit,
-    QFileDialog, QSystemTrayIcon, QWizard, QWizardPage
+    QFileDialog, QSystemTrayIcon
 )
 from PyQt6.QtGui import QPixmap, QPainter, QColor, QFont, QIcon, QAction, QGuiApplication, QDesktopServices
 from PyQt6.QtCore import Qt, QSize, QTimer, QPoint, QEvent, QUrl
@@ -4545,170 +4545,10 @@ def _set_first_run_extension_offer_done_in_config():
         json.dump(cfg, f, indent=2)
 
 
-def _win32_launch_chromium_with_extension(ext_dir) -> bool:
-    """Start Chrome or Edge with --load-extension=path (works for current session only)."""
-    import subprocess
-    from pathlib import Path
-
-    p = str(Path(ext_dir).resolve())
-    pf = os.environ.get("PROGRAMFILES", r"C:\Program Files")
-    pf86 = os.environ.get("PROGRAMFILES(X86)", r"C:\Program Files (x86)")
-    la = os.path.expandvars(r"%LOCALAPPDATA%")
-    cands = [
-        os.path.join(pf, "Google", "Chrome", "Application", "chrome.exe"),
-        os.path.join(pf86, "Google", "Chrome", "Application", "chrome.exe"),
-        os.path.join(la, "Google", "Chrome", "Application", "chrome.exe"),
-        os.path.join(pf, "Microsoft", "Edge", "Application", "msedge.exe"),
-        os.path.join(pf86, "Microsoft", "Edge", "Application", "msedge.exe"),
-    ]
-    for exe in cands:
-        if exe and os.path.isfile(exe):
-            try:
-                subprocess.Popen([exe, f"--load-extension={p}"], close_fds=True)
-                return True
-            except OSError:
-                continue
-    return False
-
-
-# Firefox: load unpacked flow uses Troubleshooting → This Firefox → Load Temporary Add-on (manifest.json).
-KDM_FIREFOX_TEMPORARY_ADDON_URL = "about:debugging#/runtime/this-firefox"
-
-
-def _darwin_launch_chromium_with_extension(ext_dir) -> bool:
-    from pathlib import Path
-
-    p = str(Path(ext_dir).resolve())
-    for exe in (
-        "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
-        "/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge",
-        "/Applications/Brave Browser.app/Contents/MacOS/Brave Browser",
-    ):
-        if os.path.isfile(exe):
-            try:
-                subprocess.Popen([exe, f"--load-extension={p}"], start_new_session=True)
-                return True
-            except OSError:
-                continue
-    return False
-
-
-def _linux_launch_chromium_with_extension(ext_dir) -> bool:
-    from pathlib import Path
-
-    p = str(Path(ext_dir).resolve())
-    for cmd in ("google-chrome-stable", "google-chrome", "chromium", "chromium-browser"):
-        c = shutil.which(cmd)
-        if c:
-            try:
-                subprocess.Popen([c, f"--load-extension={p}"], start_new_session=True)
-                return True
-            except OSError:
-                continue
-    return False
-
-
-def _launch_chromium_with_extension_session(ext_dir) -> bool:
-    if sys.platform == "win32":
-        return _win32_launch_chromium_with_extension(ext_dir)
-    if sys.platform == "darwin":
-        return _darwin_launch_chromium_with_extension(ext_dir)
-    if sys.platform.startswith("linux"):
-        return _linux_launch_chromium_with_extension(ext_dir)
-    return False
-
-
-def _launch_firefox(url: str) -> bool:
-    """Open Mozilla Firefox with a URL (e.g. about:debugging for temporary add-on)."""
-    try:
-        if sys.platform == "darwin":
-            r = subprocess.run(
-                ["open", "-a", "Firefox", url],
-                check=False,
-                capture_output=True,
-                timeout=8,
-            )
-            if r.returncode == 0:
-                return True
-            ff_mac = "/Applications/Firefox.app/Contents/MacOS/firefox"
-            if os.path.isfile(ff_mac):
-                subprocess.Popen([ff_mac, url], start_new_session=True)
-                return True
-        elif sys.platform == "win32":
-            for exe in (
-                os.path.expandvars(r"%ProgramFiles%\Mozilla Firefox\firefox.exe"),
-                os.path.expandvars(r"%ProgramFiles(x86)%\Mozilla Firefox\firefox.exe"),
-            ):
-                if exe and os.path.isfile(exe):
-                    subprocess.Popen([exe, url], close_fds=True)
-                    return True
-        else:
-            for name in ("firefox", "firefox-esr"):
-                bin_path = shutil.which(name)
-                if bin_path:
-                    subprocess.Popen([bin_path, url], start_new_session=True)
-                    return True
-    except Exception:
-        pass
-    return False
-
-
-def _open_chromium_extensions_tab() -> None:
-    import webbrowser
-
-    url = "chrome://extensions/"
-    if sys.platform == "darwin":
-        subprocess.run(["open", "-a", "Google Chrome", url], check=False)
-    elif sys.platform == "win32":
-        opened = False
-        pf = os.environ.get("PROGRAMFILES", r"C:\Program Files")
-        pf86 = os.environ.get("PROGRAMFILES(X86)", r"C:\Program Files (x86)")
-        la = os.path.expandvars(r"%LOCALAPPDATA%")
-        for exe in (
-            os.path.join(pf, "Google", "Chrome", "Application", "chrome.exe"),
-            os.path.join(pf86, "Google", "Chrome", "Application", "chrome.exe"),
-            os.path.join(la, "Google", "Chrome", "Application", "chrome.exe"),
-        ):
-            if os.path.isfile(exe):
-                subprocess.Popen([exe, url], close_fds=True)
-                opened = True
-                break
-        if not opened:
-            webbrowser.open(url)
-    else:
-        for cmd in ("google-chrome", "google-chrome-stable", "chromium", "chromium-browser"):
-            c = shutil.which(cmd)
-            if c:
-                subprocess.Popen([c, url], start_new_session=True)
-                return
-        webbrowser.open(url)
-
-
-def _open_edge_extensions_tab() -> None:
-    import webbrowser
-
-    url = "edge://extensions/"
-    if sys.platform == "darwin":
-        subprocess.run(["open", "-a", "Microsoft Edge", url], check=False)
-    elif sys.platform == "win32":
-        for exe in (
-            os.path.join(os.environ.get("PROGRAMFILES", r"C:\Program Files"), "Microsoft", "Edge", "Application", "msedge.exe"),
-            os.path.join(os.environ.get("PROGRAMFILES(X86)", r"C:\Program Files (x86)"), "Microsoft", "Edge", "Application", "msedge.exe"),
-        ):
-            if os.path.isfile(exe):
-                subprocess.Popen([exe, url], close_fds=True)
-                return
-        webbrowser.open(url)
-    else:
-        c = shutil.which("microsoft-edge-stable") or shutil.which("microsoft-edge")
-        if c:
-            subprocess.Popen([c, url], start_new_session=True)
-            return
-        webbrowser.open(url)
-
-
 def _browser_extension_do_setup(parent: Optional[QWidget]) -> bool:
     """Open bundled extension folder + browser pages; show steps. Returns False if files missing."""
+    import webbrowser
+
     ext_root = _kdm_install_dir() / "browser-extension"
     if not (ext_root / "manifest.json").is_file():
         QMessageBox.warning(
@@ -4719,30 +4559,19 @@ def _browser_extension_do_setup(parent: Optional[QWidget]) -> bool:
         )
         return False
     QDesktopServices.openUrl(QUrl.fromLocalFile(str(ext_root.resolve())))
-    loaded = _launch_chromium_with_extension_session(ext_root)
-    _launch_firefox(KDM_FIREFOX_TEMPORARY_ADDON_URL)
-    if not loaded:
-        _open_chromium_extensions_tab()
-        if sys.platform in ("win32", "darwin"):
-            _open_edge_extensions_tab()
-    msg = (
-        "Chrome, Edge, and Firefox do not allow a silent one-click install from KDM for unpacked "
-        "extensions (Web Store or enterprise policy are the exceptions).\n\n"
-        + (
-            "A Chromium-based browser may have opened with KDM loaded for this session.\n\n"
-            if loaded
-            else "Open Chrome or Edge if needed: turn on Developer mode → Load unpacked → pick the "
-            "browser-extension folder.\n\n"
-        )
-        + "Firefox: open This Firefox (about:debugging) → Load Temporary Add-on… → choose "
-        "manifest.json inside browser-extension. The add-on clears when Firefox exits unless you "
-        "use Mozilla policies / a long-lived profile setup.\n\n"
-        "Keep KDM running so the extension can reach http://127.0.0.1:9669"
-    )
+    if sys.platform == "win32":
+        webbrowser.open("chrome://extensions/")
+        webbrowser.open("edge://extensions/")
+    else:
+        webbrowser.open("chrome://extensions/")
     QMessageBox.information(
         parent,
         "KDM — Browser extension",
-        msg,
+        "In Chrome or Edge:\n"
+        "1) Turn ON Developer mode.\n"
+        "2) Click Load unpacked.\n"
+        "3) Select the folder that just opened (browser-extension).\n\n"
+        "Keep KDM running so the extension can use http://127.0.0.1:9669",
     )
     return True
 
@@ -4753,126 +4582,6 @@ def _run_browser_extension_wizard(app: QApplication) -> None:
         sys.exit(1)
     _set_first_run_extension_offer_done_in_config()
     sys.exit(0)
-
-
-def _post_install_policy_crx_present() -> bool:
-    return (_kdm_install_dir() / "KDM-extension.crx").is_file()
-
-
-class PostInstallWizard(QWizard):
-    """After OS installer: step-by-step browser setup (IDM-style first run; Windows + macOS)."""
-
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        self.setWizardStyle(QWizard.WizardStyle.ModernStyle)
-        self.setWindowTitle("Kalupura Download Manager — First-time setup")
-        self.setMinimumSize(540, 420)
-        self.setStyleSheet("""
-            QWizard, QWizardPage { background:#1e1e1e; color:#eee; }
-            QLabel { color:#ddd; font-size:11pt; }
-            QPushButton {
-                background:#2a2a2a; color:#fff; border:1px solid #444;
-                padding:8px 14px; border-radius:4px; min-height:22px;
-            }
-            QPushButton:hover { background:#003366; border:1px solid #4da6ff; }
-        """)
-
-        p1 = QWizardPage()
-        p1.setTitle("Step 1 — Installation complete")
-        v1 = QVBoxLayout(p1)
-        v1.addWidget(
-            QLabel(
-                "Kalupura Download Manager (KDM) is installed.\n\n"
-                "Click Next for browser connection — same kind of steps you see after "
-                "installing download managers like IDM: finish setup, then the main app opens."
-            )
-        )
-        v1.addStretch()
-        self.addPage(p1)
-
-        policy = _post_install_policy_crx_present()
-        p2 = QWizardPage()
-        p2.setTitle("Step 2 — Browser extension (Chrome / Edge / Firefox)")
-        v2 = QVBoxLayout(p2)
-        if policy:
-            body = (
-                "KDM registered the Chromium extension on this PC without the Chrome Web Store "
-                "(Windows policy + local update package).\n\n"
-                "Close every Chrome and Edge window now (all tabs). Then open your browser again."
-                "\n\n"
-                "After restart, open the Extensions page — Kalupura Download Manager (KDM) should "
-                "appear and stay enabled for this computer.\n\n"
-                "Firefox uses a separate step: Load Temporary Add-on (manifest.json) — see the "
-                "Firefox button below.\n\n"
-                "Use the buttons below for Extensions, Firefox setup, or the extension folder."
-            )
-        else:
-            body = (
-                "Connect your browsers to KDM:\n\n"
-                "• Chrome / Edge / Brave: Developer mode → Load unpacked → the browser-extension "
-                "folder next to this app (buttons below open the folder and extension pages).\n\n"
-                "• Firefox: This Firefox (about:debugging) → Load Temporary Add-on… → pick "
-                "manifest.json in that folder. (Temporary add-ons reset when Firefox exits.)\n\n"
-                "On Windows only: if the installer applied Chrome/Edge policy + a local .crx, "
-                "the extension may appear after closing every browser window once."
-            )
-        lab2 = QLabel(body)
-        lab2.setWordWrap(True)
-        v2.addWidget(lab2)
-        row = QHBoxLayout()
-        bc = QPushButton("Open Chrome Extensions")
-        bc.clicked.connect(self._open_chrome_ext_page)
-        row.addWidget(bc)
-        be = QPushButton("Open Edge Extensions")
-        be.clicked.connect(self._open_edge_ext_page)
-        row.addWidget(be)
-        bff = QPushButton("Firefox — load add-on")
-        bff.setToolTip("Opens about:debugging → This Firefox → use Load Temporary Add-on on manifest.json")
-        bff.clicked.connect(self._open_firefox_setup)
-        row.addWidget(bff)
-        bf = QPushButton("Open extension folder")
-        bf.clicked.connect(self._open_ext_folder)
-        row.addWidget(bf)
-        row.addStretch()
-        v2.addLayout(row)
-        bt = QPushButton("Try Chromium browser with KDM (this session only)")
-        bt.setToolTip("Starts Chrome, Edge, or Brave with --load-extension when found.")
-        bt.clicked.connect(self._try_chromium_session)
-        v2.addWidget(bt)
-        v2.addStretch()
-        self.addPage(p2)
-
-        p3 = QWizardPage()
-        p3.setTitle("Step 3 — Ready to use")
-        v3 = QVBoxLayout(p3)
-        v3.addWidget(
-            QLabel(
-                "Keep KDM running while you browse. The extension talks to KDM on your PC "
-                "(127.0.0.1:9669).\n\n"
-                "Click Finish to open the main window — downloads from the browser can be sent to KDM."
-            )
-        )
-        v3.addStretch()
-        self.addPage(p3)
-
-    def _open_chrome_ext_page(self):
-        _open_chromium_extensions_tab()
-
-    def _open_edge_ext_page(self):
-        _open_edge_extensions_tab()
-
-    def _open_firefox_setup(self):
-        _launch_firefox(KDM_FIREFOX_TEMPORARY_ADDON_URL)
-
-    def _open_ext_folder(self):
-        ext_root = _kdm_install_dir() / "browser-extension"
-        if ext_root.is_dir():
-            QDesktopServices.openUrl(QUrl.fromLocalFile(str(ext_root.resolve())))
-
-    def _try_chromium_session(self):
-        ext_root = _kdm_install_dir() / "browser-extension"
-        if ext_root.is_dir():
-            _launch_chromium_with_extension_session(ext_root)
 
 
 # ---- entry ----
@@ -4888,14 +4597,7 @@ if __name__ == "__main__":
     app = QApplication(sys.argv)
     if not run_startup_license_check(app):
         sys.exit(0)
-
-    if "--post-install" in sys.argv:
-        _set_first_run_extension_offer_done_in_config()
-        if sys.platform in ("win32", "darwin"):
-            PostInstallWizard().exec()
-
     win = KDM()
     win.show()
-    if "--post-install" not in sys.argv:
-        QTimer.singleShot(900, win._maybe_first_run_browser_extension)
+    QTimer.singleShot(900, win._maybe_first_run_browser_extension)
     sys.exit(app.exec())

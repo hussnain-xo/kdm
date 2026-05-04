@@ -1,0 +1,36 @@
+================================================================================
+  Kalupura Download Manager (KDM) — Users: what to download & 3-minute setup
+================================================================================
+
+PICK ONE FILE PER COMPUTER (from your release / download page)
+  • Windows (recommended):  KDM-Setup-__VERSION__-x64.exe
+    Portable (no installer): unzip KDM-__VERSION__-Windows-x64.zip
+  • macOS:  KDM-__VERSION__-macOS.dmg  (drag app to Applications)
+    Optional: KDM-Setup-__VERSION__-macOS.pkg  (installs to Applications)
+  • Linux:  kdm___VERSION___amd64.deb  OR  KDM-__VERSION__-Linux-x86_64.tar.gz
+
+INSTALL — keep it short
+  Windows:  Double-click Setup → Next → Finish. KDM appears in Start menu.
+  macOS:    Open DMG → drag KDM.app to Applications.
+            First open only: Control-click KDM.app → Open (Apple Gatekeeper).
+  Linux:    sudo apt install ./kdm_*_amd64.deb
+            OR extract the .tar.gz and run:  ./KDM/KDM
+
+BROWSER (Chrome / Edge) — one-time, similar idea to other download managers
+  1) Start KDM and leave it running.
+  2) On first launch, click “Yes” on the browser question — it opens the folder
+     and the extensions page for you.
+     (Or later: run  KDM --install-browser-extension  from Terminal / cmd.)
+  3) In Chrome or Edge: turn ON Developer mode → Load unpacked → choose the
+     “browser-extension” folder that opened.
+
+Safari is separate from this ZIP; see SAFARI.md in the developer package.
+
+Playwright sites: once per PC run:  playwright install chromium
+
+================================================================================
+  Urdu (مختصر)
+================================================================================
+  Windows: Setup EXE چلائیں۔ Mac: DMG سے Applications میں رکھیں۔ Linux: deb
+  یا tar۔ پہلی بار KDM میں browser سوال پر Yes دبائیں؛ پھر Chrome میں
+  Developer mode اور Load unpacked سے browser-extension والا فولڈر چنیں۔

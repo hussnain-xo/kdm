@@ -41,6 +41,8 @@ case "$OS_UNAME" in
     cp "$REL/KDM-${VERSION}-README.txt" "$STAGE/README-KDM.txt"
     cp "$REL/USER_QUICK_START.txt" "$STAGE/USER_QUICK_START.txt"
     cp "$ROOT/packaging/MAC_FIRST_LAUNCH.txt" "$STAGE/MAC_FIRST_LAUNCH.txt"
+    cp "$ROOT/packaging/mac_dmg_Complete_setup.command" "$STAGE/Complete setup.command"
+    chmod +x "$STAGE/Complete setup.command"
     if [[ ! -e "$STAGE/Applications" ]]; then
       ln -sf /Applications "$STAGE/Applications"
     fi

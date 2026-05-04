@@ -16,13 +16,6 @@ $Version = (Get-Content (Join-Path $RepoRoot "packaging\VERSION") -Raw).Trim()
 python -m pip install -r requirements-build.txt
 python -m PyInstaller packaging\kdm.spec --noconfirm --clean
 
-if ($env:OS -eq 'Windows_NT') {
-  powershell -ExecutionPolicy Bypass -File (Join-Path $RepoRoot "scripts\pack_kdm_crx.ps1")
-  if (-not (Test-Path "dist\extensions\KDM-extension.crx")) {
-    Write-Error "dist\extensions\KDM-extension.crx missing — run scripts\pack_kdm_crx.ps1 (requires Google Chrome)."
-  }
-}
-
 if (-not (Test-Path "dist\KDM\KDM.exe")) {
     Write-Error "dist\KDM\KDM.exe not found after PyInstaller."
 }

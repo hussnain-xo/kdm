@@ -25,6 +25,11 @@
    This build is a universal app (Intel + M1/M2/M3). If problems persist, tell
    support your Mac model and macOS version.
 
-5) KDM must stay running for the browser extension (Chrome) to send links.
+5) KDM must stay running for the browser extension (Chrome / Edge / Firefox) to send links.
+
+6) FIRST-TIME SETUP (same wizard as Windows)
+   • If you used the .pkg installer, KDM should open the setup wizard automatically.
+   • If you used the .dmg, double-click "Complete setup.command" next to KDM.app, or run:
+     open -a "/Applications/KDM.app" --args --post-install
 
 ================================================================================

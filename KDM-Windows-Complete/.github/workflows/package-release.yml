@@ -99,8 +99,6 @@ jobs:
           cp dist/release/KDM-${VERSION}-README.txt "$STAGE/README-KDM.txt"
           cp dist/release/USER_QUICK_START.txt "$STAGE/USER_QUICK_START.txt"
           cp packaging/MAC_FIRST_LAUNCH.txt "$STAGE/MAC_FIRST_LAUNCH.txt"
-          cp packaging/mac_dmg_Complete_setup.command "$STAGE/Complete setup.command"
-          chmod +x "$STAGE/Complete setup.command"
           ln -sf /Applications "$STAGE/Applications"
           hdiutil create -volname "Kalupura Download Manager" -srcfolder "$STAGE" -ov -format UDZO "dist/release/KDM-${VERSION}-macOS.dmg"
           ditto -c -k --sequesterRsrc --keepParent "$STAGE" "dist/release/KDM-${VERSION}-macOS.zip"
@@ -134,11 +132,6 @@ jobs:
           Copy-Item "dist\release\KDM-$v-README.txt" "dist\KDM\README-KDM.txt" -Force
           Copy-Item "dist\release\USER_QUICK_START.txt" "dist\KDM\USER_QUICK_START.txt" -Force
           Compress-Archive -Path "dist\KDM" -DestinationPath "dist\release\KDM-$v-Windows-x64.zip" -Force
-
-      - name: Pack Chrome extension CRX (policy install, no Web Store)
-        if: runner.os == 'Windows'
-        shell: pwsh
-        run: powershell -ExecutionPolicy Bypass -File scripts\pack_kdm_crx.ps1
 
       - name: Windows Inno Setup (Programs & Features)
         if: runner.os == 'Windows'

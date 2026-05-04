@@ -28,16 +28,14 @@ Kalupura Download Manager — release builds
    Linux:   dist/release/KDM-<ver>-Linux-x86_64.tar.gz — extract and run ./KDM/KDM
             dist/release/kdm_<ver>_amd64.deb — sudo apt install ./kdm_*.deb (optional)
 
-5) Browser extension WITHOUT Chrome Web Store (Windows installer — IDM-style local CRX):
-   • manifest.json includes a fixed "key" so the extension ID is stable across installs.
-   • packaging/windows/kdm-extension.pem is the dev key (for stable ID only; not Web Store).
-   • scripts/pack_kdm_crx.ps1 runs on Windows (needs Google Chrome) and writes
-     dist/extensions/KDM-extension.crx before Inno compiles.
-   • The installer task "Register KDM extension without Web Store" writes Chrome/Edge
-     ExtensionInstallForcelist (HKLM) + updates.xml + copies the .crx into Program Files.
-     Users must close all browser windows and reopen once.
-   • If a PC ignores machine policy, use Load unpacked (optional installer task) or Web Store
-     if you publish there later.
+5) Browser extension (Chrome / Edge — same as manual “Load unpacked”):
+   The PyInstaller build copies extension-for-users/KDM-Browser-Extension into
+   browser-extension/ next to the app. After install, run:
+     KDM.exe --install-browser-extension   (Windows)
+     ./KDM --install-browser-extension     (Linux)
+     Open KDM.app from Terminal: .../KDM.app/Contents/MacOS/KDM --install-browser-extension
+   Or use the installer’s post-install step (Windows). Chrome/Edge cannot silently install
+   unpacked extensions without enterprise policy; users enable Developer mode once.
 
 6) Playwright / Chromium:
    Sites that need browser extraction require Chromium once per machine:

@@ -1,4 +1,12 @@
 #!/bin/bash
-# After installing KDM.app to /Applications — browser extension lives inside the app bundle:
-# KDM.app/Contents/MacOS/../browser-extension (PyInstaller COLLECT layout) — verify at runtime.
+# After installing KDM.app to /Applications — same first-run path as Windows (--post-install wizard).
+APP="/Applications/KDM.app"
+if [[ ! -d "$APP" ]]; then
+  exit 0
+fi
+CONSOLE_USER="$(stat -f '%Su' /dev/console 2>/dev/null || true)"
+if [[ -z "$CONSOLE_USER" || "$CONSOLE_USER" == "root" || "$CONSOLE_USER" == "loginwindow" ]]; then
+  exit 0
+fi
+sudo -u "$CONSOLE_USER" open -a "$APP" --args --post-install 2>/dev/null || true
 exit 0
