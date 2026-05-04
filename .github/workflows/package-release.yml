@@ -176,10 +176,37 @@ jobs:
           if ($ps1 -notmatch 'KDM\.Main\.built\.wxs') {
             throw "scripts/build_windows_msi.ps1 must build KDM.Main.built.wxs — push latest script."
           }
+          if ($ps1 -notmatch 'KDM_USE_CI_BAKED_WIX') {
+            throw "scripts/build_windows_msi.ps1 must support CI-baked WiX (KDM_USE_CI_BAKED_WIX)."
+          }
+
+      - name: Bake WiX KDM.Main (CI)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $v = (Get-Content packaging/VERSION -Raw).Trim()
+          if (-not $v) { throw 'packaging/VERSION empty' }
+          $parts = @($v -split '\.' | ForEach-Object { $_ })
+          while ($parts.Count -lt 4) { $parts += '0' }
+          if ($parts.Count -gt 4) { $parts = $parts[0..3] }
+          $vWix = ($parts -join '.')
+          if ($vWix -notmatch '^\d+(\.\d+){3}$') { throw "Bad WiX version: $vWix" }
+          $srcPath = "$(Get-Location)/packaging/wix/KDM.Main.wxs".Replace('/', '\')
+          $src = [System.IO.File]::ReadAllText($srcPath)
+          if (-not $src.Contains('__KDM_PRODUCT_VERSION__')) { throw 'KDM.Main.wxs missing __KDM_PRODUCT_VERSION__' }
+          $exePath = ((Resolve-Path 'dist/KDM/KDM.exe').Path).Replace('\', '/')
+          $baked = $src.Replace('__KDM_PRODUCT_VERSION__', $vWix).Replace('SourceFile="dist\KDM\KDM.exe"', "SourceFile=`"$exePath`"")
+          $outPath = "$(Get-Location)/packaging/wix/KDM.Main.ci-baked.wxs".Replace('/', '\')
+          $u8 = New-Object System.Text.UTF8Encoding $false
+          [System.IO.File]::WriteAllText($outPath, $baked, $u8)
+          Write-Host "--- KDM.Main.ci-baked.wxs (head) ---"
+          Get-Content $outPath -TotalCount 12
 
       - name: Windows MSI (WiX — Welcome / license / install dir)
         if: runner.os == 'Windows'
         shell: pwsh
+        env:
+          KDM_USE_CI_BAKED_WIX: "1"
         run: |
           powershell -ExecutionPolicy Bypass -File scripts\build_windows_msi.ps1
 

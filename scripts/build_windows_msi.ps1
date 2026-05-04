@@ -50,20 +50,32 @@ if (-not $candleOutDir.EndsWith('\')) { $candleOutDir += '\' }
   -cg KdmHarvest -gg -g1 -scom -sreg -ke -dr INSTALLFOLDER -platform x64
 if ($LASTEXITCODE -ne 0) { throw "heat.exe failed" }
 
-# Compile: bake version into a generated .wxs so we do not rely on candle -d (avoids CI arg/quoting bugs).
+# Compile: baked .wxs (CI pre-bakes to avoid runner encoding / old cached trees).
 $mainWxs = Join-Path $Root "packaging\wix\KDM.Main.wxs"
 $mainWxsBuilt = Join-Path $Root "packaging\wix\KDM.Main.built.wxs"
-$token = '__KDM_PRODUCT_VERSION__'
-$wxsText = Get-Content -LiteralPath $mainWxs -Raw -Encoding utf8
-if ($wxsText.IndexOf($token, [System.StringComparison]::Ordinal) -lt 0) {
-  Write-Error "KDM.Main.wxs must contain $token for Product/@Version."
+$token = "__KDM_PRODUCT_VERSION__"
+
+if ($env:KDM_USE_CI_BAKED_WIX -eq "1") {
+  $ciBaked = Join-Path $Root "packaging\wix\KDM.Main.ci-baked.wxs"
+  if (-not (Test-Path -LiteralPath $ciBaked)) {
+    Write-Error "Missing $ciBaked — run the 'Bake WiX KDM.Main (CI)' workflow step first."
+  }
+  Copy-Item -LiteralPath $ciBaked -Destination $mainWxsBuilt -Force
+  Write-Host "Using CI-baked WiX -> $mainWxsBuilt"
+} else {
+  $wxsText = [System.IO.File]::ReadAllText($mainWxs)
+  if ($wxsText.IndexOf($token, [System.StringComparison]::Ordinal) -lt 0) {
+    Write-Error "KDM.Main.wxs must contain $token for Product/@Version."
+  }
+  $wxsBuilt = $wxsText.Replace($token, $vWix)
+  $kdmExeAbs = ((Resolve-Path (Join-Path $Root "dist\KDM\KDM.exe")).Path) -replace "\\", "/"
+  $wxsBuilt = $wxsBuilt.Replace('SourceFile="dist\KDM\KDM.exe"', ('SourceFile="{0}"' -f $kdmExeAbs))
+  $utf8NoBom = New-Object System.Text.UTF8Encoding $false
+  [System.IO.File]::WriteAllText($mainWxsBuilt, $wxsBuilt, $utf8NoBom)
 }
-$wxsBuilt = $wxsText.Replace($token, $vWix)
-# Built wxs lives under obj/; resolve Icon path to absolute so candle finds KDM.exe.
-$kdmExeAbs = ((Resolve-Path (Join-Path $Root "dist\KDM\KDM.exe")).Path) -replace '\\', '/'
-$wxsBuilt = $wxsBuilt.Replace('SourceFile="dist\KDM\KDM.exe"', ('SourceFile="{0}"' -f $kdmExeAbs))
-$utf8NoBom = New-Object System.Text.UTF8Encoding $false
-[System.IO.File]::WriteAllText($mainWxsBuilt, $wxsBuilt, $utf8NoBom)
+
+Write-Host "--- $mainWxsBuilt head (verify Product Version) ---"
+Get-Content -LiteralPath $mainWxsBuilt -TotalCount 12
 
 & $candle -nologo -arch x64 -o $candleOutDir $mainWxsBuilt $heatOut
 if ($LASTEXITCODE -ne 0) { throw "candle failed" }
