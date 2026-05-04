@@ -135,13 +135,13 @@ jobs:
           Copy-Item "dist\release\USER_QUICK_START.txt" "dist\KDM\USER_QUICK_START.txt" -Force
           Compress-Archive -Path "dist\KDM" -DestinationPath "dist\release\KDM-$v-Windows-x64.zip" -Force
 
-      - name: Pack Chrome extension CRX (skipped on CI — optional for local policy builds)
+      # Hosted runners cannot produce Chromium .crx reliably; Inno omits CRX via skipifsourcedoesntexist.
+      - name: Windows — ensure dist/extensions (CRX packed only on a real Windows PC)
         if: runner.os == 'Windows'
         shell: pwsh
-        continue-on-error: true
         run: |
-          Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
-          .\scripts\pack_kdm_crx.ps1
+          New-Item -ItemType Directory -Force -Path dist/extensions | Out-Null
+          Write-Host "Skipping CRX on CI. When needed: run scripts/pack_kdm_crx.ps1 locally, then rebuild installer."
 
       - name: Windows Inno Setup (Programs & Features)
         if: runner.os == 'Windows'
@@ -211,7 +211,8 @@ jobs:
         env:
           KDM_USE_CI_BAKED_WIX: "1"
         run: |
-          powershell -ExecutionPolicy Bypass -File scripts\build_windows_msi.ps1
+          Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
+          .\scripts\build_windows_msi.ps1
 
       - uses: actions/upload-artifact@v5
         with:

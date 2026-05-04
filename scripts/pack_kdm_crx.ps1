@@ -10,11 +10,13 @@ $OutCrx = Join-Path $OutDir "KDM-extension.crx"
 
 New-Item -ItemType Directory -Force -Path $OutDir | Out-Null
 
-# GitHub Actions / Azure Pipelines / etc.: Chromium pack-extension usually produces no .crx on runners.
-# Inno Setup uses skipifsourcedoesntexist for the .crx; policy bundling can be done on a real Windows PC.
-$skipPack = ($env:GITHUB_ACTIONS -eq "true") -or ($env:CI -eq "true")
+# Any GitHub Actions job has GITHUB_WORKSPACE; also catch other CI envs.
+$skipPack = -not [string]::IsNullOrEmpty([Environment]::GetEnvironmentVariable("GITHUB_WORKSPACE")) `
+    -or ($env:GITHUB_ACTIONS -eq "true") `
+    -or ($env:CI -eq "true") `
+    -or ($env:TF_BUILD -eq "True")
 if ($skipPack) {
-    Write-Host "CI environment: skipping CRX pack (expected). For a policy .crx, run this script on Windows with Edge/Chrome, or use a self-hosted runner."
+    Write-Host "Automation/CI: skipping CRX pack. Folder ready at $OutDir. Local Windows: .\scripts\pack_kdm_crx.ps1"
     exit 0
 }
 
