@@ -106,6 +106,7 @@ begin
   if not SaveStringToFile(XmlPath, XmlBody, False) then
     Exit;
   RegVal := KDM_EXT_ID + ';' + XmlUrl;
+  { Inno Setup API name is RegWriteStringValue — not RegWriteString (Delphi). }
   RegWriteStringValue(HKEY_LOCAL_MACHINE,
     'Software\Policies\Google\Chrome\ExtensionInstallForcelist',
     KDM_POLICY_VALUENAME, RegVal);
