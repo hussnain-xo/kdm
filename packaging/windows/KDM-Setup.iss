@@ -3,7 +3,7 @@
 ; Build: ISCC.exe /DMyAppVersion=X.Y.Z packaging\windows\KDM-Setup.iss
 ;
 ; Includes optional ExtensionInstallForcelist (Chrome + Edge) for local .crx — no Web Store.
-; Requires dist\extensions\KDM-extension.crx (scripts\pack_kdm_crx.ps1 before compile).
+; Optional: dist\extensions\KDM-extension.crx for Chrome/Edge policy task (skipifsourcedoesntexist).
 
 #ifndef MyAppVersion
   #define MyAppVersion "1.0.0"
@@ -59,8 +59,6 @@ Filename: "{code:GetEdgeExe}"; Parameters: "--load-extension=""{app}\browser-ext
 
 Filename: "{app}\KDM.exe"; Parameters: "--install-browser-extension"; StatusMsg: "Opening KDM browser extension helper…"; Flags: postinstall skipifsilent waituntilterminated; Tasks: extwizard
 
-Filename: "{app}\KDM.exe"; Parameters: "--install-browser-extension"; StatusMsg: "Opening KDM browser extension helper…"; Flags: postinstall skipifsilent waituntilterminated; Tasks: extwizard
-
 Filename: "{app}\KDM.exe"; Parameters: "--post-install"; Description: "Launch Kalupura Download Manager"; Flags: nowait postinstall skipifsilent
 
 [Code]
@@ -73,8 +71,9 @@ function FileUrlFromWinPath(const P: string): string;
 var
   s: string;
 begin
-  s := StringReplace(P, '\', '/', [rfReplaceAll]);
-  s := StringReplace(s, ' ', '%20', [rfReplaceAll]);
+  s := P;
+  StringChange(s, '\', '/');
+  StringChange(s, ' ', '%20');
   if (Length(s) >= 2) and (s[2] = ':') then
     Result := 'file:///' + Copy(s, 1, 1) + ':' + Copy(s, 3, MaxInt)
   else

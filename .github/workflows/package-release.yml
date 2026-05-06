@@ -214,6 +214,11 @@ jobs:
           Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass -Force
           .\scripts\build_windows_msi.ps1
 
+      - name: Windows — list dist/release (before upload)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: Get-ChildItem dist/release | Format-Table Name, Length
+
       - uses: actions/upload-artifact@v5
         with:
           name: KDM-${{ matrix.label }}

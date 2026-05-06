@@ -45,6 +45,10 @@ $msiOut  = Join-Path $Root "dist\release\KDM-$v-x64.msi"
 $candleOutDir = Join-Path $Obj ""
 if (-not $candleOutDir.EndsWith('\')) { $candleOutDir += '\' }
 
+# Clean stale WiX outputs (re-runs / self-hosted runners).
+Remove-Item -Path (Join-Path $Obj "*.wixobj") -Force -ErrorAction SilentlyContinue
+Remove-Item -LiteralPath $heatOut -Force -ErrorAction SilentlyContinue
+
 # Harvest all files from dist\KDM into ComponentGroup KdmHarvest
 & $heat dir (Join-Path $Root "dist\KDM") -nologo -o $heatOut `
   -cg KdmHarvest -gg -g1 -scom -sreg -ke -dr INSTALLFOLDER -platform x64
