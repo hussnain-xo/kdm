@@ -49,10 +49,100 @@ if (-not $candleOutDir.EndsWith('\')) { $candleOutDir += '\' }
 Remove-Item -Path (Join-Path $Obj "*.wixobj") -Force -ErrorAction SilentlyContinue
 Remove-Item -LiteralPath $heatOut -Force -ErrorAction SilentlyContinue
 
-# Harvest all files from dist\KDM into ComponentGroup KdmHarvest
-& $heat dir (Join-Path $Root "dist\KDM") -nologo -o $heatOut `
-  -cg KdmHarvest -gg -g1 -scom -sreg -ke -dr INSTALLFOLDER -platform x64
+$kdmHarvest = (Resolve-Path (Join-Path $Root "dist\KDM")).Path
+# Binder / UI assets (e.g. license) — forward slashes for light -b.
+$wixBinder = ((Resolve-Path (Join-Path $Root "packaging\wix")).Path -replace '\\', '/').TrimEnd('/')
+
+function Remove-KdmMetadataDirs {
+  param([string]$HarvestRoot)
+  # Pip metadata dirs — not needed at runtime; LGHT0103 on CI if heat picks them up.
+  # Use Name match; -Filter "*.dist-info" alone can miss nested dirs on some hosts.
+  Get-ChildItem -LiteralPath $HarvestRoot -Recurse -Force -Directory -ErrorAction SilentlyContinue |
+    Where-Object {
+      $n = $_.Name
+      $n -like '*.dist-info' -or $n -like '*.egg-info'
+    } |
+    Sort-Object { $_.FullName.Length } -Descending |
+    ForEach-Object { Remove-Item -LiteralPath $_.FullName -Recurse -Force -ErrorAction SilentlyContinue }
+}
+
+Remove-KdmMetadataDirs $kdmHarvest
+
+# heat -var emits Source="$(var.KdmHarvestDir)\rel\path". Inlining to a real disk path avoids candle -d
+# (CI/local preprocessor edge cases) and light SourceDir / missing bind LGHT0103.
+& $heat dir $kdmHarvest -nologo -o $heatOut `
+  -cg KdmHarvest -gg -g1 -scom -sreg -ke -dr INSTALLFOLDER -platform x64 `
+  -var var.KdmHarvestDir
 if ($LASTEXITCODE -ne 0) { throw "heat.exe failed" }
+
+# Belt-and-suspenders: drop any heat <Component> whose <File Source> points at .dist-info / .egg-info,
+# and matching <ComponentRef> rows (otherwise candle fails on dangling refs).
+function Remove-HeatWxsMetadataComponents {
+  param([string]$WxsPath)
+  $t = [System.IO.File]::ReadAllText($WxsPath)
+  if ($t.IndexOf('.dist-info', [System.StringComparison]::OrdinalIgnoreCase) -lt 0 -and
+      $t.IndexOf('.egg-info', [System.StringComparison]::OrdinalIgnoreCase) -lt 0) {
+    return
+  }
+  $cmpRx = New-Object System.Text.RegularExpressions.Regex(
+    '(?s)<Component\b[^>]*\bId="([^"]+)"[^>]*>.*?</Component>\s*',
+    [System.Text.RegularExpressions.RegexOptions]::IgnoreCase
+  )
+  $removed = New-Object System.Collections.Generic.List[string]
+  $t = $cmpRx.Replace($t, [System.Text.RegularExpressions.MatchEvaluator] {
+      param($m)
+      $block = $m.Groups[0].Value
+      if ($block -match '(?i)\.(dist-info|egg-info)') {
+        [void]$removed.Add($m.Groups[1].Value)
+        return ''
+      }
+      $block
+    })
+  foreach ($id in $removed) {
+    $esc = [regex]::Escape($id)
+    $refRx = New-Object System.Text.RegularExpressions.Regex(
+      '<ComponentRef\b[^>]+\bId="' + $esc + '"\s*/>\s*',
+      [System.Text.RegularExpressions.RegexOptions]::IgnoreCase
+    )
+    $t = $refRx.Replace($t, '')
+  }
+  $u8 = New-Object System.Text.UTF8Encoding $false
+  [System.IO.File]::WriteAllText($WxsPath, $t, $u8)
+}
+
+Remove-HeatWxsMetadataComponents $heatOut
+
+$heatUtf8 = New-Object System.Text.UTF8Encoding $false
+$heatText = [System.IO.File]::ReadAllText($heatOut)
+$harvestAbs = $kdmHarvest.TrimEnd('\') + '\'
+$heatVarPrefix = '$(var.KdmHarvestDir)' + '\'
+$heatVarFwd = '$(var.KdmHarvestDir)' + '/'
+if ($heatText.IndexOf('$(var.KdmHarvestDir)', [System.StringComparison]::Ordinal) -ge 0) {
+  $heatText = $heatText.Replace($heatVarPrefix, $harvestAbs)
+  $heatText = $heatText.Replace($heatVarFwd, ($harvestAbs -replace '\\', '/'))
+  [System.IO.File]::WriteAllText($heatOut, $heatText, $heatUtf8)
+  $heatText = [System.IO.File]::ReadAllText($heatOut)
+}
+# If heat did not emit $(var...) (older tool), paths may still be Source="SourceDir\...
+$heatSdPrefix = 'Source="SourceDir' + '\'
+if ($heatText.IndexOf($heatSdPrefix, [System.StringComparison]::Ordinal) -ge 0) {
+  $heatText = $heatText.Replace($heatSdPrefix, ('Source="' + $harvestAbs))
+  [System.IO.File]::WriteAllText($heatOut, $heatText, $heatUtf8)
+}
+
+$heatVerifyText = [System.IO.File]::ReadAllText($heatOut)
+if ($heatVerifyText.IndexOf('$(var.KdmHarvestDir)', [System.StringComparison]::Ordinal) -ge 0) {
+  throw 'HeatKdm.wxs still contains $(var.KdmHarvestDir) after inlining; heat format may have changed.'
+}
+if ($heatVerifyText.IndexOf($heatSdPrefix, [System.StringComparison]::Ordinal) -ge 0) {
+  throw 'HeatKdm.wxs still has SourceDir paths after rewrite; check heat.exe and dist\KDM content.'
+}
+
+$sampleFileLine = Select-String -LiteralPath $heatOut -Pattern '<File ' | Select-Object -First 1
+if ($sampleFileLine) {
+  Write-Host "--- Heat harvest sample (after inline disk root) ---"
+  Write-Host $sampleFileLine.Line.Trim()
+}
 
 # Compile: baked .wxs (CI pre-bakes to avoid runner encoding / old cached trees).
 $mainWxs = Join-Path $Root "packaging\wix\KDM.Main.wxs"
@@ -78,6 +168,14 @@ if ($env:KDM_USE_CI_BAKED_WIX -eq "1") {
   [System.IO.File]::WriteAllText($mainWxsBuilt, $wxsBuilt, $utf8NoBom)
 }
 
+$utf8NoBomMain = New-Object System.Text.UTF8Encoding $false
+$licenseRtfAbs = (Resolve-Path (Join-Path $Root "packaging\wix\License.rtf")).Path
+$mainPatch = [System.IO.File]::ReadAllText($mainWxsBuilt)
+if ($mainPatch.IndexOf('Value="License.rtf"', [System.StringComparison]::Ordinal) -ge 0) {
+  $mainPatch = $mainPatch.Replace('Value="License.rtf"', ('Value="' + $licenseRtfAbs + '"'))
+  [System.IO.File]::WriteAllText($mainWxsBuilt, $mainPatch, $utf8NoBomMain)
+}
+
 Write-Host "--- $mainWxsBuilt head (verify Product Version) ---"
 Get-Content -LiteralPath $mainWxsBuilt -TotalCount 12
 
@@ -86,7 +184,8 @@ if ($LASTEXITCODE -ne 0) { throw "candle failed" }
 
 $wixobjs = Get-ChildItem -Path $Obj -Filter *.wixobj
 if (-not $wixobjs) { throw "No .wixobj from candle" }
-& $light -nologo -o $msiOut -ext WixUIExtension -sw1076 -cultures:en-us @($wixobjs | ForEach-Object { $_.FullName })
+# -b wix: any remaining relative assets under packaging\wix; harvested File/@Source is absolute after candle.
+& $light -nologo -o $msiOut -b $wixBinder -ext WixUIExtension -sw1076 -cultures:en-us @($wixobjs | ForEach-Object { $_.FullName })
 if ($LASTEXITCODE -ne 0) { throw "light failed" }
 
 Write-Host "MSI: $msiOut"

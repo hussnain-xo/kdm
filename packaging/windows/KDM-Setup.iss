@@ -39,10 +39,12 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 
 [Tasks]
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
-Name: "policyext"; Description: "Register KDM extension without Web Store (Chrome/Edge policy — close all browser windows after setup, then reopen; like IDM local integration)"; GroupDescription: "Browser integration:"; Flags: checkedonce
-Name: "chromeload"; Description: "Also start Chrome with extension for this session only (--load-extension)"; GroupDescription: "Browser integration:"; Flags: unchecked
-Name: "edgeload"; Description: "Also start Edge with extension for this session only"; GroupDescription: "Browser integration:"; Flags: unchecked
-Name: "extwizard"; Description: "Show manual «Load unpacked» help (folder + tabs)"; GroupDescription: "Browser integration:"; Flags: unchecked
+; policyext = machine policy + local .crx → Chrome/Edge can install extension without Web Store (see BUILD.txt — need KDM-extension.crx in {app}).
+Name: "policyext"; Description: "Without Web Store: register KDM for Chrome & Edge (policy + local .crx — close every browser window after setup, reopen once)"; GroupDescription: "Browser integration:"; Flags: checked
+; Immediate effect: opens browser with unpacked extension for this run only (no store). Checked by default; user can clear it. Chrome launch still skipped if Chrome missing ([Run] Check).
+Name: "chromeload"; Description: "After setup: open Chrome with KDM extension loaded (this session — no Web Store)"; GroupDescription: "Browser integration:"; Flags: checked
+Name: "edgeload"; Description: "After setup: open Edge with KDM extension loaded (this session)"; GroupDescription: "Browser integration:"; Flags: unchecked
+Name: "extwizard"; Description: "Show manual «Load unpacked» help if policy/session load did not apply on your PC"; GroupDescription: "Browser integration:"; Flags: unchecked
 
 [Files]
 Source: "..\..\dist\KDM\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
