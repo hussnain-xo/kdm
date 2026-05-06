@@ -106,10 +106,10 @@ begin
   if not SaveStringToFile(XmlPath, XmlBody, False) then
     Exit;
   RegVal := KDM_EXT_ID + ';' + XmlUrl;
-  RegWriteString(HKEY_LOCAL_MACHINE,
+  RegWriteStringValue(HKEY_LOCAL_MACHINE,
     'Software\Policies\Google\Chrome\ExtensionInstallForcelist',
     KDM_POLICY_VALUENAME, RegVal);
-  RegWriteString(HKEY_LOCAL_MACHINE,
+  RegWriteStringValue(HKEY_LOCAL_MACHINE,
     'Software\Policies\Microsoft\Edge\ExtensionInstallForcelist',
     KDM_POLICY_VALUENAME, RegVal);
 end;
