@@ -40,9 +40,9 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 [Tasks]
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
 ; policyext = machine policy + local .crx → Chrome/Edge can install extension without Web Store (see BUILD.txt — need KDM-extension.crx in {app}).
-Name: "policyext"; Description: "Without Web Store: register KDM for Chrome & Edge (policy + local .crx — close every browser window after setup, reopen once)"; GroupDescription: "Browser integration:"; Flags: checked
-; Immediate effect: opens browser with unpacked extension for this run only (no store). Checked by default; user can clear it. Chrome launch still skipped if Chrome missing ([Run] Check).
-Name: "chromeload"; Description: "After setup: open Chrome with KDM extension loaded (this session — no Web Store)"; GroupDescription: "Browser integration:"; Flags: checked
+; (No Flags: checked — older Inno on CI rejects "checked"; tasks default to checked unless Flags: unchecked.)
+Name: "policyext"; Description: "Without Web Store: register KDM for Chrome & Edge (policy + local .crx — close every browser window after setup, reopen once)"; GroupDescription: "Browser integration:"
+Name: "chromeload"; Description: "After setup: open Chrome with KDM extension loaded (this session — no Web Store)"; GroupDescription: "Browser integration:"
 Name: "edgeload"; Description: "After setup: open Edge with KDM extension loaded (this session)"; GroupDescription: "Browser integration:"; Flags: unchecked
 Name: "extwizard"; Description: "Show manual «Load unpacked» help if policy/session load did not apply on your PC"; GroupDescription: "Browser integration:"; Flags: unchecked
 

@@ -102,7 +102,24 @@ jobs:
           cp packaging/mac_dmg_Complete_setup.command "$STAGE/Complete setup.command"
           chmod +x "$STAGE/Complete setup.command"
           ln -sf /Applications "$STAGE/Applications"
-          hdiutil create -volname "Kalupura Download Manager" -srcfolder "$STAGE" -ov -format UDZO "dist/release/KDM-${VERSION}-macOS.dmg"
+          DMG="dist/release/KDM-${VERSION}-macOS.dmg"
+          rm -f "$DMG"
+          hdiutil detach "/Volumes/Kalupura Download Manager" -force 2>/dev/null || true
+          sync
+          sleep 2
+          for i in 1 2 3; do
+            if hdiutil create -volname "Kalupura Download Manager" -srcfolder "$STAGE" -ov -format UDZO "$DMG"; then
+              break
+            fi
+            echo "hdiutil create failed (attempt $i), retrying after cleanup..."
+            rm -f "$DMG"
+            hdiutil detach "/Volumes/Kalupura Download Manager" -force 2>/dev/null || true
+            sync
+            sleep "$(( i * 4 ))"
+            if [[ "$i" -eq 3 ]]; then
+              exit 1
+            fi
+          done
           ditto -c -k --sequesterRsrc --keepParent "$STAGE" "dist/release/KDM-${VERSION}-macOS.zip"
           rm -rf "$STAGE"
 

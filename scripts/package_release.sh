@@ -48,7 +48,25 @@ case "$OS_UNAME" in
     fi
     DMG="$REL/KDM-${VERSION}-macOS.dmg"
     rm -f "$DMG"
-    hdiutil create -volname "Kalupura Download Manager" -srcfolder "$STAGE" -ov -format UDZO "$DMG"
+    hdiutil detach "/Volumes/Kalupura Download Manager" -force 2>/dev/null || true
+    sync
+    sleep 1
+    ok=0
+    for i in 1 2 3; do
+      if hdiutil create -volname "Kalupura Download Manager" -srcfolder "$STAGE" -ov -format UDZO "$DMG"; then
+        ok=1
+        break
+      fi
+      echo "hdiutil create failed (attempt $i), retrying..."
+      rm -f "$DMG"
+      hdiutil detach "/Volumes/Kalupura Download Manager" -force 2>/dev/null || true
+      sync
+      sleep "$(( i * 3 ))"
+    done
+    if [[ "$ok" -ne 1 ]]; then
+      echo "ERROR: hdiutil create failed after retries."
+      exit 1
+    fi
     ZIP="$REL/KDM-${VERSION}-macOS.zip"
     ditto -c -k --sequesterRsrc --keepParent "$STAGE" "$ZIP"
     rm -rf "$STAGE"
