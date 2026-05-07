@@ -23,7 +23,7 @@ from typing import Optional
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from urllib.parse import urlparse, parse_qs, urljoin, quote
 
-from kdm.licensing import LicenseGate, run_startup_license_check, show_license_blocking_dialog
+from kdm.licensing import LicenseGate, run_startup_license_check, show_license_blocking_dialog, user_kdm_config_path
 warnings.filterwarnings("ignore", message=".*Python version 3.9 has been deprecated.*")
 import yt_dlp
 from PyQt6.QtWidgets import (
@@ -53,18 +53,50 @@ if sys.platform.startswith("win"):
     ILFree.argtypes = [ctypes.c_void_p]
 
 API_HOST, API_PORT = "127.0.0.1", 9669
-CONFIG_FILE = "kdm_config.json"
+
+
+def _config_file_path() -> str:
+    """Absolute path to kdm_config.json — user-writable when frozen (installer puts exe under Program Files)."""
+    from pathlib import Path
+
+    if getattr(sys, "frozen", False):
+        return str(user_kdm_config_path())
+    return str(Path(__file__).resolve().parent / "kdm_config.json")
+
+
+def _migrate_legacy_kdm_config_if_needed(path: str) -> None:
+    """Copy config from beside the frozen exe if AppData config does not exist yet."""
+    if not getattr(sys, "frozen", False) or os.path.isfile(path):
+        return
+    from pathlib import Path
+
+    legacy = Path(sys.executable).resolve().parent / "kdm_config.json"
+    if legacy.is_file():
+        try:
+            shutil.copy2(str(legacy), path)
+        except Exception:
+            pass
+
+
+def _translations_file_path() -> str:
+    from pathlib import Path
+
+    if getattr(sys, "frozen", False):
+        return str(Path(sys.executable).resolve().parent / "translations.json")
+    return str(Path(__file__).resolve().parent / "translations.json")
 
 
 def _read_category_paths_from_config():
     """IDM-style: remember default folder per category (saved in kdm_config.json)."""
-    if not os.path.isfile(CONFIG_FILE):
+    p = _config_file_path()
+    _migrate_legacy_kdm_config_if_needed(p)
+    if not os.path.isfile(p):
         return {}
     try:
-        with open(CONFIG_FILE, "r", encoding="utf-8") as f:
+        with open(p, "r", encoding="utf-8") as f:
             d = json.load(f)
-        p = d.get("category_default_paths")
-        return p if isinstance(p, dict) else {}
+        cp = d.get("category_default_paths")
+        return cp if isinstance(cp, dict) else {}
     except Exception:
         return {}
 
@@ -85,10 +117,12 @@ def _infer_category_from_url(url: str) -> str:
 def _merge_save_category_path(category, directory):
     if not category or not directory:
         return
+    p = _config_file_path()
+    _migrate_legacy_kdm_config_if_needed(p)
     cfg = {}
-    if os.path.isfile(CONFIG_FILE):
+    if os.path.isfile(p):
         try:
-            with open(CONFIG_FILE, "r", encoding="utf-8") as f:
+            with open(p, "r", encoding="utf-8") as f:
                 cfg = json.load(f)
         except Exception:
             cfg = {}
@@ -97,9 +131,9 @@ def _merge_save_category_path(category, directory):
         cp = {}
     cp[category] = os.path.normpath(os.path.expanduser(str(directory).strip()))
     cfg["category_default_paths"] = cp
-    with open(CONFIG_FILE, "w", encoding="utf-8") as f:
+    with open(p, "w", encoding="utf-8") as f:
         json.dump(cfg, f, indent=2)
-TRANSLATION_FILE = "translations.json"
+
 
 #########################################
 #  EMBED / STREAM CDN HELPERS           #
@@ -3511,15 +3545,17 @@ class KDM(QMainWindow):
     # ---- config / translations ----
     def _load_translations(self):
         try:
-            with open(TRANSLATION_FILE, "r", encoding="utf-8") as f:
+            with open(_translations_file_path(), "r", encoding="utf-8") as f:
                 return json.load(f)
         except:
             return {}
 
     def _load_config(self):
-        if os.path.exists(CONFIG_FILE):
+        p = _config_file_path()
+        _migrate_legacy_kdm_config_if_needed(p)
+        if os.path.exists(p):
             try:
-                return json.load(open(CONFIG_FILE, "r", encoding="utf-8"))
+                return json.load(open(p, "r", encoding="utf-8"))
             except:
                 pass
         return {
@@ -3534,9 +3570,9 @@ class KDM(QMainWindow):
 
     def _save_config(self):
         cfg = {}
-        if os.path.isfile(CONFIG_FILE):
+        if os.path.isfile(_config_file_path()):
             try:
-                with open(CONFIG_FILE, "r", encoding="utf-8") as f:
+                with open(_config_file_path(), "r", encoding="utf-8") as f:
                     cfg = json.load(f)
             except Exception:
                 cfg = {}
@@ -3547,7 +3583,7 @@ class KDM(QMainWindow):
         cfg["play_sound_on_complete"] = self.play_sound_on_complete
         cfg["max_concurrent_downloads"] = getattr(self, "max_concurrent_downloads", 4)
         cfg["speed_limit_kbps"] = getattr(self, "speed_limit_kbps", 0)
-        with open(CONFIG_FILE, "w", encoding="utf-8") as f:
+        with open(_config_file_path(), "w", encoding="utf-8") as f:
             json.dump(cfg, f, indent=2)
 
     def _maybe_first_run_browser_extension(self):
@@ -3867,8 +3903,8 @@ class KDM(QMainWindow):
 
     def _purchase_or_distribution_url(self) -> str:
         try:
-            if os.path.isfile(CONFIG_FILE):
-                with open(CONFIG_FILE, "r", encoding="utf-8") as f:
+            if os.path.isfile(_config_file_path()):
+                with open(_config_file_path(), "r", encoding="utf-8") as f:
                     d = json.load(f)
                     return (
                         (d.get("purchase_url") or d.get("distribution_page") or "")
@@ -4202,7 +4238,7 @@ class KDM(QMainWindow):
             row2.addStretch()
             layout.addLayout(row2)
         else:
-            cfg_abs = os.path.abspath(CONFIG_FILE)
+            cfg_abs = _config_file_path()
             layout.addWidget(
                 QLabel(
                     self.tr("Tip: add your sales page to kdm_config.json")
@@ -4533,15 +4569,17 @@ def _kdm_install_dir():
 
 def _set_first_run_extension_offer_done_in_config():
     """So the main app does not show the first-run browser prompt again (e.g. after installer wizard)."""
+    p = _config_file_path()
+    _migrate_legacy_kdm_config_if_needed(p)
     cfg = {}
-    if os.path.isfile(CONFIG_FILE):
+    if os.path.isfile(p):
         try:
-            with open(CONFIG_FILE, "r", encoding="utf-8") as f:
+            with open(p, "r", encoding="utf-8") as f:
                 cfg = json.load(f)
         except Exception:
             cfg = {}
     cfg["first_run_extension_offer_shown"] = True
-    with open(CONFIG_FILE, "w", encoding="utf-8") as f:
+    with open(p, "w", encoding="utf-8") as f:
         json.dump(cfg, f, indent=2)
 
 

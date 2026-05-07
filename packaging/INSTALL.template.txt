@@ -20,7 +20,8 @@ BROWSER EXTENSION (Chrome / Edge)
     that folder. KDM must stay running for http://127.0.0.1:9669.
 
 AFTER INSTALL
-  • Set your store link in kdm_config.json (next to the app) as "purchase_url" for Buy Now.
+  • Set your store link in kdm_config.json as "purchase_url" for Buy Now. Installed build:
+    Windows: %APPDATA%\KalupuraDM\kdm_config.json — portable ZIP: next to KDM.exe.
   • Some sites need browser automation: install Chromium for Playwright once:
  playwright install chromium
 

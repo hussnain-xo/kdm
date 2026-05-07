@@ -41,6 +41,13 @@ def _state_path() -> Path:
     return d / "license_state.json"
 
 
+def user_kdm_config_path() -> Path:
+    """Writable kdm_config.json when frozen (next to license_state; not under Program Files)."""
+    d = _data_dir()
+    d.mkdir(parents=True, exist_ok=True)
+    return d / "kdm_config.json"
+
+
 def _utc_now() -> datetime:
     return datetime.now(timezone.utc)
 
@@ -311,6 +318,7 @@ def _config_paths_for_purchase_url() -> list:
     paths: list = []
     try:
         if getattr(sys, "frozen", False):
+            paths.append(user_kdm_config_path())
             paths.append(Path(sys.executable).resolve().parent / "kdm_config.json")
             meipass = getattr(sys, "_MEIPASS", None)
             if meipass:
